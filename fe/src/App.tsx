@@ -54,6 +54,9 @@ import AdminLayout from "@/modules/dashboard-jefe/components/layout/AdminLayout"
 import AdminDashboardPage from "@/modules/dashboard-jefe/pages/DashboardPage";
 import UsersManagementPage from "@/modules/dashboard-jefe/pages/UsersManagementPage";
 
+// Sprint 4 - Orders Management
+import OrdersPage from "@/modules/dashboard-jefe/pages/OrdersPage";
+
 function App() {
   return (
     <BrowserRouter>
@@ -93,7 +96,7 @@ function App() {
             }
           >
             <Route index element={<AdminDashboardPage />} />
-            <Route path="orders" element={<div className="p-4 text-gray-500">Pedidos - Próximamente</div>} />
+            <Route path="orders" element={<OrdersPage />} />
             <Route path="catalog" element={<div className="p-4 text-gray-500">Catálogo - Próximamente</div>} />
             <Route path="inventory" element={<div className="p-4 text-gray-500">Inventario - Próximamente</div>} />
             <Route path="tasks" element={<div className="p-4 text-gray-500">Tareas - Próximamente</div>} />

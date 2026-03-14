@@ -18,9 +18,10 @@ from app.modules.users.router import router as users_router
 from app.modules.admin.router import router as admin_router
 from app.modules.type_document.router import router as type_document_router
 from app.modules.dashboard_jefe.router import router as dashboard_jefe_router
+from app.modules.orders.router import router as orders_router
 
 # Importar modelos para que SQLAlchemy los registre en Base.metadata
-from app.models import role, user, password_reset_token, type_document  # noqa: F401
+from app.models import role, user, password_reset_token, type_document, order  # noqa: F401
 
 
 @asynccontextmanager
@@ -81,6 +82,7 @@ app.include_router(users_router)
 app.include_router(admin_router)
 app.include_router(type_document_router)
 app.include_router(dashboard_jefe_router)
+app.include_router(orders_router)
 
 # ────────────────────────────
 # 📍 Endpoint raíz de bienvenida

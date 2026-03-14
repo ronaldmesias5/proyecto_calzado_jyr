@@ -48,7 +48,7 @@ export default function AdminSidebar() {
   const navigate = useNavigate();
 
   return (
-    <aside className="w-44 min-h-screen bg-white border-r border-gray-200 flex flex-col">
+    <aside className="w-44 min-h-screen bg-white border-r border-gray-200 flex flex-col sticky top-0 max-h-screen overflow-y-auto">
       {/* Logo */}
       <div
         className="flex items-center justify-center px-4 py-4 border-b border-gray-100 cursor-pointer"
