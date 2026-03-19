@@ -325,38 +325,34 @@ def seed_admin(db: Session) -> bool:
 
 def seed_users(db: Session) -> bool:
     """
-    Limpia clientes erróneos y asegura que existan los 7 usuarios originales
-    (4 empleados + 3 clientes). Ronald (jefe) ya lo maneja seed_admin().
+    Limpia todos los clientes de prueba y asegura que existan los 4 empleados.
+    Ronald (jefe) ya lo maneja seed_admin().
 
-    Siempre elimina los 3 clientes de prueba creados por error.
+    Siempre elimina todos los clientes de prueba.
 
     Return:
         True si todo OK, False si hubo error.
     """
     try:
-        # ── 1. Eliminar clientes erróneos (siempre, de forma segura) ────────
-        wrong_emails = [
-            "contacto@mayoristaa.com",
-            "gerencia@tiendaretailc.com",
-            "info@distribuidorab.com",
-        ]
-        deleted = (
-            db.query(User)
-            .filter(User.email.in_(wrong_emails))
-            .delete(synchronize_session=False)
-        )
-        if deleted > 0:
-            db.commit()
-            print(f"🗑️  {deleted} cliente(s) erróneo(s) eliminado(s)")
-
-        # ── 2. Obtener roles ─────────────────────────────────────────────────
-        employee_role = db.query(Role).filter(Role.name == "employee").first()
+        # ── 1. Eliminar TODOS los clientes ────────────────────────────────
         client_role = db.query(Role).filter(Role.name == "client").first()
-        if not employee_role or not client_role:
-            print("❌ Roles employee/client no encontrados — ejecuta seed_roles() primero")
+        if client_role:
+            deleted = (
+                db.query(User)
+                .filter(User.role_id == client_role.id)
+                .delete(synchronize_session=False)
+            )
+            if deleted > 0:
+                db.commit()
+                print(f"🗑️  {deleted} cliente(s) eliminado(s) — sin clientes registrados")
+
+        # ── 2. Obtener role de empleado ──────────────────────────────────
+        employee_role = db.query(Role).filter(Role.name == "employee").first()
+        if not employee_role:
+            print("❌ Rol employee no encontrado — ejecuta seed_roles() primero")
             return False
 
-        # ── 3. Definir los 7 usuarios originales ────────────────────────────
+        # ── 3. Definir solo los 4 empleados ──────────────────────────────
         users_data = [
             # Empleados
             dict(
@@ -394,34 +390,6 @@ def seed_users(db: Session) -> bool:
                 phone="+57 311 111 0004",
                 role_id=employee_role.id,
                 occupation="guarnecedor",
-            ),
-            # Clientes
-            dict(
-                id=uuid.UUID("b1000000-0000-0000-0000-000000000001"),
-                email="andres.cliente@gmail.com",
-                name="Andres",
-                last_name="Plazas",
-                phone="+57 300 000 0001",
-                role_id=client_role.id,
-                occupation=None,
-            ),
-            dict(
-                id=uuid.UUID("b1000000-0000-0000-0000-000000000002"),
-                email="carlos.cliente@gmail.com",
-                name="Carlos",
-                last_name="Mendez",
-                phone="+57 300 000 0002",
-                role_id=client_role.id,
-                occupation=None,
-            ),
-            dict(
-                id=uuid.UUID("b1000000-0000-0000-0000-000000000003"),
-                email="sofia.cliente@gmail.com",
-                name="Sofia",
-                last_name="Rojas",
-                phone="+57 300 000 0003",
-                role_id=client_role.id,
-                occupation=None,
             ),
         ]
 

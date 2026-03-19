@@ -121,17 +121,19 @@ docker compose up --build
 
 ---
 
-## 👤 Usuario Existente
+## 👤 Usuario Disponible
 
-**Jefe (Administrador)**
+**Jefe/Administrador (Único Usuario)**
 - Email: `ronald.jefe@gmail.com`
 - Contraseña: `Test123456!`
-- Rol: Empleado (con ocupación de Jefe)
+- Rol: Empleado (Jefe de Producción)
 - Estado: Activo y Validado
 
-**Clientes de Prueba Disponibles**
-- Email: `cliente1@gmail.com` | Contraseña: `Test123456!`
-- Email: `cliente2@gmail.com` | Contraseña: `Test123456!`
+**Empleados Adicionales** (creables desde admin)
+- Marina Leyton (emplantillador)
+- Juan Cortez (cortador)
+- Pedro Solis (solador)
+- Laura Garcia (guarnecedor)
 
 ---
 
@@ -227,7 +229,7 @@ docker compose up --build
 - ✅ Ver catálogo (68 productos)
 - ✅ Crear órdenes de pedidos
 - ✅ Ajustar stock por talla/color
-- ✅ Visualizar métricas y pedidos recientes
+- ✅ Visualizar métricas
 
 **Nota Importante**: Cuando se crea un nuevo usuario (empleado o cliente), ese usuario debe cambiar su contraseña en el primer login (campo `must_change_password=true`).
 
