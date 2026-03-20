@@ -73,6 +73,11 @@ def _order_to_detail_response(order: Order) -> OrderDetailResponse:
                 size=d.size,
                 colour=d.colour,
                 amount=d.amount,
+                stock_available=next(
+                    (float(inv.amount) for inv in d.product.inventory 
+                     if inv.size == d.size and inv.colour == d.colour), 
+                    0.0
+                ) if d.product else 0.0,
                 state=d.state,
                 order_date=d.order_date,
             )

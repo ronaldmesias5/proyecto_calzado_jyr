@@ -24,6 +24,7 @@ export interface OrderDetailItem {
   size: string;
   colour?: string | null;
   amount: number;
+  stock_available?: number;
   state?: OrderStatus;
   order_date?: string;
 }

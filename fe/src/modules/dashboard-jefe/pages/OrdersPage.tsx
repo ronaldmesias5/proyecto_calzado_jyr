@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Módulo: OrdersPage.tsx
  * Descripción: Página de gestión de pedidos mayoristas del dashboard.
  */
@@ -9,6 +9,7 @@ import {
   Zap, CheckCircle, XCircle, ChevronLeft, ChevronRight,
   ArrowRight, Mail, Phone, User, Plus, ArrowLeft,
   PlayCircle, Pencil, Ban, RefreshCw, Trash2, Maximize2,
+  Check, X, ChevronDown, Download, Eye, MoreVertical, Calendar
 } from 'lucide-react';
 import {
   getOrders,
@@ -272,89 +273,115 @@ function OrderDetailView({
                     });
                   }
                   
-                  const totalProductPairs = lines.reduce((s, l) => s + l.amount, 0);
+                    const totalProductPairs = lines.reduce((s, l) => s + l.amount, 0);
+                    const allAvailable = lines.every(l => (l.stock_available ?? 0) >= l.amount);
 
-                  return (
-                    <div key={productId} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                      <div className="bg-gray-50 border-b border-gray-200 px-5 py-4 flex items-center justify-between">
-                        <div className="flex items-center gap-4 min-w-0">
-                          {productImageUrl && !failedImages.has(productImageUrl) ? (
-                            <button
-                              onClick={() => { setViewingImage(productImageUrl); setViewingProductName(productName); }}
-                              style={{
+                    return (
+                      <div key={productId} className={`bg-white border rounded-xl overflow-hidden ${allAvailable ? 'border-green-200' : 'border-gray-200'}`}>
+                        <div className={`${allAvailable ? 'bg-green-50/50 border-green-100' : 'bg-gray-50 border-gray-200'} border-b px-5 py-4 flex items-center justify-between`}>
+                          <div className="flex items-center gap-4 min-w-0">
+                            {productImageUrl && !failedImages.has(productImageUrl) ? (
+                              <button
+                                onClick={() => { setViewingImage(productImageUrl); setViewingProductName(productName); }}
+                                style={{
+                                  width: '140px',
+                                  height: '140px',
+                                  border: `1px solid ${allAvailable ? '#bbf7d0' : '#d1d5db'}`,
+                                  borderRadius: '8px',
+                                  padding: '0',
+                                  overflow: 'hidden',
+                                  backgroundColor: '#ffffff',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                                title="Click para ver imagen completa"
+                              >
+                                <img
+                                  src={productImageUrl}
+                                  alt={productName}
+                                  crossOrigin="anonymous"
+                                  onError={() => {
+                                    console.error('❌ Imagen error:', productImageUrl);
+                                    handleImageError(productImageUrl);
+                                  }}
+                                  onLoad={() => {
+                                    console.log('✅ Imagen cargada:', productImageUrl);
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'contain',
+                                    backgroundColor: '#ffffff',
+                                  }}
+                                />
+                              </button>
+                            ) : (
+                              <div style={{
                                 width: '140px',
                                 height: '140px',
-                                border: '1px solid #d1d5db',
+                                border: `1px solid ${allAvailable ? '#bbf7d0' : '#d1d5db'}`,
                                 borderRadius: '8px',
-                                padding: '0',
-                                overflow: 'hidden',
-                                backgroundColor: '#ffffff',
-                                cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
+                                backgroundColor: '#ffffff',
                                 flexShrink: 0,
-                              }}
-                              title="Click para ver imagen completa"
-                            >
-                              <img
-                                src={productImageUrl}
-                                alt={productName}
-                                crossOrigin="anonymous"
-                                onError={() => {
-                                  console.error('❌ Imagen error:', productImageUrl);
-                                  handleImageError(productImageUrl);
-                                }}
-                                onLoad={() => {
-                                  console.log('✅ Imagen cargada:', productImageUrl);
-                                }}
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: 'contain',
-                                  backgroundColor: '#ffffff',
-                                }}
-                              />
-                            </button>
-                          ) : (
-                            <div style={{
-                              width: '140px',
-                              height: '140px',
-                              border: '1px solid #d1d5db',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              backgroundColor: '#ffffff',
-                              flexShrink: 0,
-                            }}>
-                              <Package className="w-10 h-10 text-gray-300" />
+                              }}>
+                                <Package className={`w-10 h-10 ${allAvailable ? 'text-green-300' : 'text-gray-300'}`} />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-bold text-gray-900 text-lg">{productName}</p>
+                                {allAvailable && (
+                                  <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-green-200">
+                                    <CheckCircle size={10} />
+                                    Todo en Bodega
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {[brandName, styleName, categoryName].filter(Boolean).join(' · ')}
+                              </p>
                             </div>
-                          )}
-                          <div className="min-w-0">
-                            <p className="font-bold text-gray-900 text-lg">{productName}</p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {[brandName, styleName, categoryName].filter(Boolean).join(' · ')}
-                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0 whitespace-nowrap">
+                              {totalProductPairs} pares pedidos
+                            </span>
                           </div>
                         </div>
-                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-2 rounded-full flex-shrink-0 ml-4 whitespace-nowrap">
-                          {totalProductPairs} pares
-                        </span>
-                      </div>
-                      {/* Tallas y cantidades */}
-                      <div className="p-5">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                          {lines.map((line) => (
-                            <div key={line.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                              <span className="text-xs font-semibold text-gray-500">Talla {line.size}</span>
-                              <span className="text-sm font-bold text-gray-900">{line.amount}</span>
-                            </div>
-                          ))}
+                        {/* Tallas y cantidades */}
+                        <div className="p-5">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            {lines.map((line) => {
+                              const hasStock = (line.stock_available ?? 0) >= line.amount;
+                              const stockColor = hasStock ? 'text-green-600' : (line.stock_available ?? 0) > 0 ? 'text-orange-500' : 'text-red-500';
+                              const bgColor = hasStock ? 'bg-green-50/30' : 'bg-gray-50';
+                              const borderColor = hasStock ? 'border-green-100' : 'border-gray-200';
+
+                              return (
+                                <div key={line.id} className={`flex flex-col gap-1 border rounded-lg px-3 py-2 ${bgColor} ${borderColor}`}>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-semibold text-gray-500">Talla {line.size}</span>
+                                    <span className="text-sm font-bold text-gray-900">{line.amount} pares</span>
+                                  </div>
+                                  <div className="flex items-center justify-between border-t border-gray-100 mt-1 pt-1">
+                                    <span className="text-[10px] text-gray-400 uppercase font-medium">En Bodega:</span>
+                                    <span className={`text-xs font-bold ${stockColor}`}>
+                                      {Math.floor(line.stock_available ?? 0)}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
+                    );
                 })}
               </div>
             );

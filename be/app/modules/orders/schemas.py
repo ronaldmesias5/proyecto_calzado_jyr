@@ -30,6 +30,7 @@ class OrderDetailItemResponse(BaseModel):
     size: str
     colour: str | None = None
     amount: int
+    stock_available: float | None = None
     state: OrderStatus | None = None
     order_date: datetime | None = None
 
