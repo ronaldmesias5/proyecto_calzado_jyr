@@ -3,15 +3,15 @@ Archivo: be/app/modules/admin/router.py
 Descripción: Router FastAPI con endpoints administrativos para gestión de usuarios.
 
 ¿Qué?
-  Define 8 endpoints protegidos (admin/jefe) para gestión de usuarios:
+  Define endpoints protegidos (admin/jefe) para gestión de usuarios:
   - POST /create-employee: Crear empleado con occupation (admin/jefe)
   - POST /create-jefe: Crear jefe (admin/jefe)
   - POST /create-client: Crear cliente (admin/jefe)
   - GET /users: Listar todos los usuarios con filtros opcionales
   - GET /users/{user_id}: Obtener detalles de un usuario
-  - PUT /users/{user_id}/validate: Validar cuenta de usuario
-  - PUT /users/{user_id}/deactivate: Desactivar usuario
-  - PUT /users/{user_id}/activate: Reactivar usuario
+  - PATCH /users/{user_id}: Actualizar datos de un usuario
+  - PATCH /users/{user_id}/validate: Validar cuenta de usuario
+  - PATCH /users/{user_id}/force-password-change: Forzar cambio de contraseña
   
 ¿Para qué?
   - Permitir a admin/jefe crear y gestionar usuarios del sistema
@@ -37,7 +37,12 @@ from app.core.dependencies import get_current_user, get_db
 from app.models.role import Role
 from app.models.user import User
 from app.modules.auth.schemas import MessageResponse, UserResponse
-from app.modules.admin.schemas import AdminCreateClientRequest, AdminCreateEmployeeRequest, AdminCreateJefeRequest
+from app.modules.admin.schemas import (
+    AdminCreateClientRequest, 
+    AdminCreateEmployeeRequest, 
+    AdminCreateJefeRequest,
+    AdminUpdateUserRequest
+)
 from app.utils.security import hash_password
 
 router = APIRouter(
@@ -191,6 +196,72 @@ def get_all_users(
         query = query.join(Role, User.role_id == Role.id).filter(Role.name_role == role)
 
     return [_build_user_response(u) for u in query.all()]
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=UserResponse,
+    summary="Obtener detalles de un usuario",
+)
+def get_user_detail(
+    user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserResponse:
+    """Retorna los datos detallados de un usuario específico."""
+    _require_admin_or_jefe(current_user)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+    return _build_user_response(user)
+
+
+@router.patch(
+    "/users/{user_id}",
+    response_model=UserResponse,
+    summary="Actualizar datos de un usuario",
+)
+def update_user(
+    user_id: uuid.UUID,
+    data: AdminUpdateUserRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserResponse:
+    """Actualiza parcialmente los datos de un usuario (admin o jefe)."""
+    _require_admin_or_jefe(current_user)
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+
+    # Campos básicos
+    if data.name is not None:
+        user.name_user = data.name
+    if data.last_name is not None:
+        user.last_name = data.last_name
+    if data.phone is not None:
+        user.phone = data.phone
+    if data.identity_document is not None:
+        user.identity_document = data.identity_document
+    if data.identity_document_type_id is not None:
+        user.identity_document_type_id = data.identity_document_type_id
+    
+    # Campos específicos
+    if data.occupation is not None:
+        user.occupation = data.occupation
+    if data.business_name is not None:
+        user.business_name = data.business_name
+    
+    # Estado (Activo/Inactivo)
+    if data.is_active is not None:
+        user.is_active = data.is_active
+
+    user.updated_at = datetime.now(timezone.utc)
+    user.updated_by = current_user.id
+
+    db.commit()
+    db.refresh(user)
+    return _build_user_response(user)
 
 
 @router.post(

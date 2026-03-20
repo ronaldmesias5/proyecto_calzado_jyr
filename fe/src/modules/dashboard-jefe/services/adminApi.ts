@@ -35,6 +35,17 @@ export interface CreateClientRequest {
   password: string;
 }
 
+export interface UpdateUserRequest {
+  name?: string;
+  last_name?: string;
+  phone?: string;
+  identity_document?: string;
+  identity_document_type_id?: string;
+  occupation?: string;
+  business_name?: string;
+  is_active?: boolean;
+}
+
 // ────────────────────────────────────────────────
 // Funciones de API
 // ────────────────────────────────────────────────
@@ -43,6 +54,18 @@ export interface CreateClientRequest {
 export async function getAllUsers(role?: string): Promise<UserResponse[]> {
   const params = role ? { role } : {};
   const response = await api.get<UserResponse[]>(`${ADMIN_PREFIX}/users`, { params });
+  return response.data;
+}
+
+/** Obtiene el detalle de un usuario específico */
+export async function getUserDetail(userId: string): Promise<UserResponse> {
+  const response = await api.get<UserResponse>(`${ADMIN_PREFIX}/users/${userId}`);
+  return response.data;
+}
+
+/** Actualiza los datos de un usuario */
+export async function updateUser(userId: string, data: UpdateUserRequest): Promise<UserResponse> {
+  const response = await api.patch<UserResponse>(`${ADMIN_PREFIX}/users/${userId}`, data);
   return response.data;
 }
 

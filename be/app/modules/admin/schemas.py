@@ -140,3 +140,35 @@ class AdminCreateJefeRequest(BaseModel):
         if len(v) < 2:
             raise ValueError("El apellido debe tener al menos 2 caracteres")
         return v
+
+
+class AdminUpdateUserRequest(BaseModel):
+    """Schema para actualizar datos de un usuario por un admin/jefe."""
+    name: str | None = None
+    last_name: str | None = None
+    phone: str | None = None
+    identity_document: str | None = None
+    identity_document_type_id: uuid.UUID | None = None
+    occupation: OccupationType | None = None
+    business_name: str | None = None
+    is_active: bool | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("El nombre debe tener al menos 2 caracteres")
+        return v
+
+    @field_validator("last_name")
+    @classmethod
+    def validate_last_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("El apellido debe tener al menos 2 caracteres")
+        return v

@@ -64,6 +64,10 @@ import OrdersPage from "@/modules/dashboard-jefe/pages/OrdersPage";
 import CatalogPage from "@/modules/dashboard-jefe/pages/CatalogPage";
 import InventoryPage from "@/modules/dashboard-jefe/pages/InventoryPage";
 
+// Sprint 6 - Employees and Clients Management
+import EmployeesPage from "@/modules/dashboard-jefe/pages/EmployeesPage";
+import ClientsPage from "@/modules/dashboard-jefe/pages/ClientsPage";
+
 function App() {
   const [showCookiePolicy, setShowCookiePolicy] = useState(false);
 
@@ -121,8 +125,8 @@ function App() {
             <Route path="catalog" element={<CatalogPage />} />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="tasks" element={<div className="p-4 text-gray-500">Tareas - Próximamente</div>} />
-            <Route path="employees" element={<div className="p-4 text-gray-500">Empleados - Próximamente</div>} />
-            <Route path="clients" element={<div className="p-4 text-gray-500">Clientes - Próximamente</div>} />
+            <Route path="employees" element={<EmployeesPage />} />
+            <Route path="clients" element={<ClientsPage />} />
             <Route path="usuarios" element={<UsersManagementPage />} />
             <Route path="reactivation" element={<div className="p-4 text-gray-500">Reactivación - Próximamente</div>} />
             <Route path="alerts" element={<div className="p-4 text-gray-500">Alertas - Próximamente</div>} />
