@@ -1,10 +1,11 @@
 /**
  * Archivo: components/ui/Button.tsx
- * Descripción: Botón reutilizable con estado de carga.
- * ¿Para qué? Estandarizar todos los botones del sistema con los colores de CALZADO J&R.
+ * Descripción: Botón reutilizable con estado de carga y alineación estandarizada.
+ * 
+ * ¿Qué? Componente de botón con variantes primary/secondary y spinner de carga.
+ * ¿Para qué? Estandarizar la UI y cumplir con la restricción RD-003 (alineación) y WCAG.
+ * ¿Impacto? Centraliza el diseño de acciones y previene el uso de degradados prohibidos (RD-001).
  */
-
-import { useState } from "react";
 
 interface ButtonProps {
   children: React.ReactNode;
@@ -25,7 +26,6 @@ export function Button({
   variant = "primary",
   onClick,
 }: ButtonProps) {
-  const [isHovered, setIsHovered] = useState(false);
 
   const baseClasses =
     "btn-glow rounded-lg px-6 py-3 text-sm font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60 relative overflow-hidden";
@@ -40,30 +40,18 @@ export function Button({
   return (
     <>
       <style>{`
-        @keyframes shimmerHover {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        .button-shimmer-effect {
-          position: absolute;
-          left: 0;
-          top: 0;
-          height: 100%;
-          width: 100%;
-          background: linear-gradient(120deg, transparent 0%, #FFD700 50%, transparent 100%);
-          opacity: 0.6;
-          animation: shimmerHover 0.6s infinite;
+        .btn-glow:active {
+          transform: scale(0.98);
         }
       `}</style>
       <button
         type={type}
         disabled={isLoading || disabled}
         onClick={onClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        aria-busy={isLoading}
+        aria-label={isLoading ? "Procesando, por favor espera" : undefined}
         className={`${baseClasses} ${variantClasses} ${widthClass}`}
       >
-        {isHovered && <div className="button-shimmer-effect" />}
         <span className="relative z-10">
           {isLoading ? (
             <span className="flex items-center justify-center gap-2">

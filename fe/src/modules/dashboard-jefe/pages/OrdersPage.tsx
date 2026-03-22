@@ -155,6 +155,7 @@ function OrderDetailView({
   onDelete,
   onEdit,
   onContactClient,
+  error,
 }: {
   order: OrderDetail;
   isUpdating: boolean;
@@ -163,6 +164,7 @@ function OrderDetailView({
   onDelete: (orderId: string) => void;
   onEdit: () => void;
   onContactClient: () => void;
+  error?: string | null;
 }) {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -178,11 +180,19 @@ function OrderDetailView({
   const canComplete        = order.state === 'en_progreso';
   const canCancel          = order.state !== 'cancelado' && order.state !== 'completado';
   const canDelete          = order.state === 'cancelado';
+  const canRestore         = order.state === 'cancelado';
   const canEdit            = order.state === 'pendiente' || order.state === 'en_progreso';
+  const canRevert          = order.state === 'completado';
   const isEverythingInStock = order.details.length > 0 && order.details.every(d => (d.stock_available ?? 0) >= d.amount);
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+          <p className="text-sm text-red-800 font-medium">{error}</p>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -511,11 +521,35 @@ function OrderDetailView({
                 </div>
               )}
 
+              {/* Deshacer Completado */}
+              {canRevert && (
+                <button
+                  onClick={() => onStatusChange(order.id, 'pendiente')}
+                  disabled={isUpdating}
+                  className="w-full py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors font-bold flex items-center justify-center gap-2 text-sm shadow-md border border-amber-500"
+                >
+                  {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  Deshacer Completado
+                </button>
+              )}
+
+              {/* Restaurar Pedido (solo si está cancelado) */}
+              {canRestore && (
+                <button
+                  onClick={() => onStatusChange(order.id, 'pendiente')}
+                  disabled={isUpdating}
+                  className="w-full py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors font-bold flex items-center justify-center gap-2 text-sm shadow-md border border-indigo-500"
+                >
+                  {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  Restaurar Pedido
+                </button>
+              )}
+
               {/* Eliminar Pedido (solo si está cancelado) */}
               {canDelete && !confirmDelete && (
                 <button
                   onClick={() => setConfirmDelete(true)}
-                  className="w-full py-2.5 border border-red-400 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors font-medium flex items-center justify-center gap-2 text-sm"
+                  className="w-full py-2.5 border border-red-400 text-red-700 bg-red-100/50 rounded-lg hover:bg-red-100 transition-colors font-medium flex items-center justify-center gap-2 text-sm"
                 >
                   <Trash2 className="w-4 h-4" />
                   Eliminar Pedido
@@ -637,13 +671,16 @@ export default function OrdersPage() {
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     setIsUpdating(true);
+    setError(null);
     try {
       const updated = await updateOrderStatus(orderId, { state: newStatus });
       setSelectedOrder(updated);
       setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, state: newStatus } : o));
       await calculateTotals();
-    } catch {
-      setError('Error al actualizar el estado del pedido.');
+    } catch (err: unknown) {
+      // @ts-expect-error err has response from axios
+      const msg = err.response?.data?.detail || 'Error al actualizar el estado del pedido.';
+      setError(msg);
     } finally {
       setIsUpdating(false);
     }
@@ -679,11 +716,12 @@ export default function OrdersPage() {
         <OrderDetailView
           order={selectedOrder}
           isUpdating={isUpdating}
-          onBack={() => { setView('list'); setSelectedOrder(null); }}
+          onBack={() => { setView('list'); setSelectedOrder(null); setError(null); }}
           onStatusChange={handleStatusChange}
           onDelete={handleDeleteOrder}
           onEdit={() => setIsEditModalOpen(true)}
           onContactClient={() => setIsContactModalOpen(true)}
+          error={error}
         />
         <OrderFormModal
           isOpen={isEditModalOpen}

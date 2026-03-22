@@ -36,14 +36,7 @@ from app.core.database import SessionLocal
 from app.models.user import User
 from app.utils.security import decode_token
 
-class OAuth2PasswordBearerWithCookie(OAuth2PasswordBearer):
-    async def __call__(self, request: Request) -> str | None:
-        authorization = request.cookies.get("access_token")
-        if authorization:
-            return authorization
-        return await super().__call__(request)
-
-oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def get_db() -> Generator[Session, None, None]:

@@ -35,7 +35,17 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Interceptor de request eliminado porque usamos HttpOnly cookies
+// Interceptor de request — inyecta el token en cada petición (RT-004)
+api.interceptors.request.use(
+  (config) => {
+    const token = sessionStorage.getItem("access_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Interceptor de response — maneja errores HTTP de forma centralizada
 api.interceptors.response.use(

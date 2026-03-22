@@ -52,14 +52,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const isAuthenticated = !!user && !!accessToken;
 
   const saveTokens = useCallback((access: string, refresh: string) => {
-    setAccessToken("cookie_token");
-    setRefreshToken("cookie_token");
+    setAccessToken(access);
+    setRefreshToken(refresh);
+    sessionStorage.setItem("access_token", access);
+    sessionStorage.setItem("refresh_token", refresh);
   }, []);
 
   const clearAuth = useCallback(async () => {
     try {
       await authApi.logoutUser();
     } catch (e) {}
+    sessionStorage.removeItem("access_token");
+    sessionStorage.removeItem("refresh_token");
     setAccessToken(null);
     setRefreshToken(null);
     setUser(null);
@@ -67,20 +71,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     const verifySession = async () => {
+      const token = sessionStorage.getItem("access_token");
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+      
       try {
         const userData = await authApi.getMe();
         setUser(userData);
-        setAccessToken("cookie_token");
+        setAccessToken(token);
       } catch {
-        setAccessToken(null);
-        setUser(null);
+        clearAuth();
       } finally {
         setIsLoading(false);
       }
     };
 
     verifySession();
-  }, []);
+  }, [clearAuth]);
 
   const login = useCallback(
     async (data: LoginRequest) => {

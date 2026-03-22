@@ -1,4 +1,4 @@
-﻿"""
+"""
 Rutas administrativas para gestión de catálogo
 Admin y Jefe pueden crear, editar, eliminar: Marcas, Estilos, Productos e Inventario
 """
@@ -19,6 +19,7 @@ from app.models.style import Style
 from app.models.category import Category
 from app.models.product import Product
 from app.models.inventory import Inventory
+from app.models.inventory_movement import InventoryMovement, InventoryMovementType
 from app.models.user import User
 from app.modules.admin.catalog_schemas import (
     BrandCreateRequest,
@@ -878,9 +879,26 @@ def create_or_update_inventory(
     ).scalar()
     
     if existing_inv:
+        # Calcular diferencia para el movimiento
+        diff = req.quantity - float(existing_inv.amount)
+        
         # Actualizar
         existing_inv.amount = req.quantity
         existing_inv.updated_at = datetime.now(timezone.utc)
+        
+        if diff != 0:
+            movement_type = InventoryMovementType.entrada if diff > 0 else InventoryMovementType.salida
+            db.add(InventoryMovement(
+                id=uuid.uuid4(),
+                product_id=product_uuid,
+                user_id=current_user.id,
+                type_of_movement=movement_type,
+                size=req.size,
+                amount=abs(diff),
+                reason="Ajuste manual (Panel Admin)",
+                movement_date=datetime.now(timezone.utc)
+            ))
+            
         db.commit()
         db.refresh(existing_inv)
         return {
@@ -900,6 +918,20 @@ def create_or_update_inventory(
             amount=req.quantity,
         )
         db.add(inventory)
+        
+        # Registrar movimiento de entrada inicial
+        if req.quantity > 0:
+            db.add(InventoryMovement(
+                id=uuid.uuid4(),
+                product_id=product_uuid,
+                user_id=current_user.id,
+                type_of_movement=InventoryMovementType.entrada,
+                size=req.size,
+                amount=req.quantity,
+                reason="Stock inicial (Panel Admin)",
+                movement_date=datetime.now(timezone.utc)
+            ))
+            
         db.commit()
         db.refresh(inventory)
         return {
@@ -980,10 +1012,27 @@ def bulk_update_inventory(
         ).scalar()
         
         if existing_inv:
+            # Calcular diferencia
+            diff = quantity - float(existing_inv.amount)
+            
             # Actualizar
             existing_inv.amount = quantity
             existing_inv.updated_at = datetime.now(timezone.utc)
             db.add(existing_inv)
+            
+            if diff != 0:
+                movement_type = InventoryMovementType.entrada if diff > 0 else InventoryMovementType.salida
+                db.add(InventoryMovement(
+                    id=uuid.uuid4(),
+                    product_id=product_uuid,
+                    user_id=current_user.id,
+                    type_of_movement=movement_type,
+                    size=size,
+                    amount=abs(diff),
+                    reason="Ajuste masivo (Panel Admin)",
+                    movement_date=datetime.now(timezone.utc)
+                ))
+            
             updated_count += 1
             results.append({
                 "size": size,
@@ -1000,6 +1049,19 @@ def bulk_update_inventory(
                     amount=quantity,
                 )
                 db.add(inventory)
+                
+                # Registrar entrada inicial masiva
+                db.add(InventoryMovement(
+                    id=uuid.uuid4(),
+                    product_id=product_uuid,
+                    user_id=current_user.id,
+                    type_of_movement=InventoryMovementType.entrada,
+                    size=size,
+                    amount=quantity,
+                    reason="Stock masivo inicial (Panel Admin)",
+                    movement_date=datetime.now(timezone.utc)
+                ))
+                
                 created_count += 1
                 results.append({
                     "size": size,

@@ -141,7 +141,7 @@ class User(Base):
         nullable=True,
     )
 
-    # Solo para empleados (guarnición, solador, cortador, emplantillador)
+    # User roles/occupations (Values in Spanish per user preference)
     occupation: Mapped[str | None] = mapped_column(
         Enum("jefe", "cortador", "guarnecedor", "solador", "emplantillador", name="occupation_type"),
         nullable=True,

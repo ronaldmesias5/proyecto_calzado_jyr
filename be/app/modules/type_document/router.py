@@ -32,8 +32,8 @@ from app.models.type_document import TypeDocument
 from app.modules.type_document.schemas import TypeDocumentCreate, TypeDocumentResponse
 
 router = APIRouter(
-    prefix="/api/v1/type-documents",
-    tags=["type-documents"],
+    prefix="/api/v1/document-types",
+    tags=["document-types"],
 )
 
 

@@ -87,7 +87,7 @@ def _require_admin(current_user: User) -> None:
 
 
 def _require_jefe(current_user: User) -> None:
-    """Valida que el usuario sea un jefe (employee + occupation='jefe')."""
+    """Valida que el usuario sea un jefe (empleado + occupation='jefe')."""
     if current_user.role.name_role != "employee" or current_user.occupation != "jefe":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -189,7 +189,7 @@ def get_all_users(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[UserResponse]:
-    """Lista todos los usuarios. Filtro opcional por rol (client, employee, admin). Acceso: admin, jefe o cualquier usuario autenticado."""
+    """Lista todos los usuarios. Filtro opcional por rol (cliente, empleado, administrador). Acceso: admin, jefe o cualquier usuario autenticado."""
     # Permitir acceso a cualquier usuario autenticado (no requerir admin/jefe específicamente)
     query = db.query(User)
     if role:
@@ -316,7 +316,7 @@ def create_employee(
 
     employee_role = db.query(Role).filter(Role.name_role == "employee").first()
     if not employee_role:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Rol 'employee' no encontrado")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Rol 'empleado' no encontrado")
 
     new_user = User(
         email=data.email,
@@ -363,7 +363,7 @@ def create_client(
 
     client_role = db.query(Role).filter(Role.name_role == "client").first()
     if not client_role:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Rol 'client' no encontrado")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Rol 'cliente' no encontrado")
 
     new_user = User(
         email=data.email,
@@ -416,7 +416,7 @@ def create_jefe(
 
     employee_role = db.query(Role).filter(Role.name_role == "employee").first()
     if not employee_role:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Rol 'employee' no encontrado")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Rol 'empleado' no encontrado")
 
     new_user = User(
         email=data.email,

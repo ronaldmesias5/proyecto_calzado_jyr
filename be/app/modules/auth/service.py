@@ -47,6 +47,7 @@ from app.modules.auth.schemas import (
     UserLogin,
 )
 from app.utils.email import send_password_reset_email
+from app.core.logging_config import audit_logger
 from app.utils.security import (
     create_access_token,
     create_refresh_token,
@@ -54,6 +55,16 @@ from app.utils.security import (
     hash_password,
     verify_password,
 )
+
+def _redact_email(email: str) -> str:
+    """user@example.com -> us***@example.com para privacidad en logs."""
+    try:
+        parts = email.split("@")
+        if len(parts) != 2: return "invalid-email"
+        name, domain = parts
+        return f"{name[:2]}***@{domain}"
+    except:
+        return "redacted-error"
 
 
 def register_user(db: Session, user_data: UserCreate) -> User:
@@ -103,6 +114,7 @@ def login_user(db: Session, login_data: UserLogin) -> TokenResponse:
     user = db.execute(stmt).scalar_one_or_none()
 
     if not user or not verify_password(login_data.password, user.hashed_password):
+        audit_logger.warning(f"Intento de login fallido: {_redact_email(login_data.email)} (credenciales incorrectas)")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Correo o contraseña incorrectos",
@@ -110,10 +122,13 @@ def login_user(db: Session, login_data: UserLogin) -> TokenResponse:
         )
 
     if not user.is_active:
+        audit_logger.warning(f"Intento de login bloqueado: {_redact_email(login_data.email)} (cuenta inactiva)")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cuenta pendiente de validación por el administrador.",
         )
+
+    audit_logger.info(f"Login exitoso: {_redact_email(user.email)}")
 
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
@@ -167,6 +182,7 @@ def change_password(db: Session, user: User, password_data: ChangePasswordReques
 
     user.hashed_password = hash_password(password_data.new_password)
     db.commit()
+    audit_logger.info(f"Cambio de contraseña exitoso: {_redact_email(user.email)}")
 
 
 async def request_password_reset(db: Session, email: str) -> None:
@@ -189,6 +205,7 @@ async def request_password_reset(db: Session, email: str) -> None:
     db.commit()
 
     await send_password_reset_email(email=user.email, token=reset_token)
+    audit_logger.info(f"Solicitud de recuperación de contraseña: {_redact_email(user.email)}")
 
 
 def reset_password(db: Session, reset_data: ResetPasswordRequest) -> None:
@@ -228,3 +245,4 @@ def reset_password(db: Session, reset_data: ResetPasswordRequest) -> None:
     user.hashed_password = hash_password(reset_data.new_password)
     token_record.used = True
     db.commit()
+    audit_logger.info(f"Restablecimiento de contraseña exitoso (vía token): {_redact_email(user.email)}")

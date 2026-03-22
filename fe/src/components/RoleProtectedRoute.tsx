@@ -24,7 +24,7 @@ interface RoleProtectedRouteProps {
  * Ejemplos:
  * - Solo admin: <RoleProtectedRoute allowedRoles={["admin"]}>...</RoleProtectedRoute>
  * - Admin o Jefe: <RoleProtectedRoute allowedRoles={["admin", "employee"]} allowedOccupations={["jefe"]}>...</RoleProtectedRoute>
- * - Todos los employees: <RoleProtectedRoute allowedRoles={["employee"]}>...</RoleProtectedRoute>
+ * - Todos los empleados: <RoleProtectedRoute allowedRoles={["employee"]}>...</RoleProtectedRoute>
  */
 export function RoleProtectedRoute({
   children,
@@ -59,12 +59,12 @@ export function RoleProtectedRoute({
   // Verificar acceso
   let hasAccess = false;
 
-  // 1. Admin siempre puede acceder si está en allowedRoles
+  // 1. Administrador siempre puede acceder si está en allowedRoles
   if (allowedRoles?.includes("admin") && userRole === "admin") {
     hasAccess = true;
   }
 
-  // 2. Si es employee, verificar ocupación si está especificada
+  // 2. Si es empleado, verificar ocupación si está especificada
   if (allowedRoles?.includes("employee") && userRole === "employee") {
     if (allowedOccupations && allowedOccupations.length > 0) {
       // Si hay restricción de ocupación, verificar que coincida

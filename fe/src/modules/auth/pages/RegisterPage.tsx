@@ -33,7 +33,6 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { TermsModal } from "@/components/ui/TermsModal";
 import { PrivacyPolicyModal } from "@/components/ui/PrivacyPolicyModal";
-import { CookiePolicyModal } from "@/components/ui/CookiePolicyModal";
 import { getTypeDocuments } from "@/api/type-documents";
 import { TypeDocument } from "@/types/auth";
 
@@ -55,22 +54,16 @@ export function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(true);
-  const [acceptedPrivacy, setAcceptedPrivacy] = useState(true);
+  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
   // Cargar tipos de documentos al montar
   useEffect(() => {
-    const loadTypeDocuments = async () => {
-      try {
-        const docs = await getTypeDocuments();
-        setTypeDocuments(docs);
-      } catch (err) {
-        console.error("Error loading type documents:", err);
-      }
-    };
-    loadTypeDocuments();
+    // Cargar tipos de documentos
+    getTypeDocuments()
+      .then((data) => setTypeDocuments(data))
+      .catch((err) => console.error("Error loading document types:", err));
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -89,7 +82,11 @@ export function RegisterPage() {
       return;
     }
 
-    // El consentimiento se da al hacer clic en el botón, según el nuevo diseño UX.
+    // El consentimiento se da mediante el checkbox unificado
+    if (!acceptedPolicies) {
+      setError("Debes aceptar los términos y la política de privacidad para continuar");
+      return;
+    }
 
     setIsLoading(true);
 
@@ -118,7 +115,7 @@ export function RegisterPage() {
         password: "", 
         confirmPassword: "" 
       });
-      // Estados de aceptación ya no se resetean manualmente ya que son implícitos
+      setAcceptedPolicies(false);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Error al crear la cuenta";
@@ -268,27 +265,41 @@ export function RegisterPage() {
           onCopy={(e) => e.preventDefault()}
         />
 
-        {/* Texto de aceptación consolidado */}
-        <div className="mb-6 text-[13px] text-gray-500 leading-relaxed text-center sm:text-left">
-          Al hacer clic en "Crear cuenta", acepto los{" "}
-          <button
-            type="button"
-            onClick={() => setShowTerms(true)}
-            className="font-medium text-[#1e40af] underline hover:text-[#1e3a8a]"
-          >
-            Términos y Condiciones
-          </button>{" "}
-          de CALZADO J&R, y autorizo el tratamiento de mis datos personales de acuerdo con la{" "}
-          <button
-            type="button"
-            onClick={() => setShowPrivacy(true)}
-            className="font-medium text-[#1e40af] underline hover:text-[#1e3a8a]"
-          >
-            Política de Privacidad
-          </button>.
+        {/* Checkbox de aceptación consolidado */}
+        <div className="mb-6">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptedPolicies}
+              onChange={(e) => {
+                setAcceptedPolicies(e.target.checked);
+                setError(null);
+              }}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-[#1e3a8a] cursor-pointer"
+            />
+            <span className="text-sm text-gray-600">
+              He leído y acepto los{" "}
+              <button
+                type="button"
+                onClick={() => setShowTerms(true)}
+                className="font-medium text-[#1e40af] underline hover:text-[#1e3a8a]"
+              >
+                Términos y Condiciones
+              </button>{" "}
+              y la{" "}
+              <button
+                type="button"
+                onClick={() => setShowPrivacy(true)}
+                className="font-medium text-[#1e40af] underline hover:text-[#1e3a8a]"
+              >
+                Política de Privacidad
+              </button>{" "}
+              de CALZADO J&R.
+            </span>
+          </label>
         </div>
 
-        <Button type="submit" fullWidth isLoading={isLoading}>
+        <Button type="submit" fullWidth isLoading={isLoading} disabled={!acceptedPolicies}>
           Crear cuenta
         </Button>
       </form>

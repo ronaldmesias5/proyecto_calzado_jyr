@@ -294,7 +294,7 @@ def seed_admin(db: Session) -> bool:
             print(f"✅ Jefe ya existe ({existing_jefe.email})")
             return True
         
-        # Obtener rol employee
+        # Obtener rol empleado
         employee_role = db.query(Role).filter(Role.name_role == "employee").first()
         if not employee_role:
             print("❌ Rol employee no existe")

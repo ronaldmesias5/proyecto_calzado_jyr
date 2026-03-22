@@ -8,11 +8,11 @@ import api from '@/api/axios';
 import { TypeDocument } from '@/types/auth';
 
 export async function getTypeDocuments(): Promise<TypeDocument[]> {
-  const response = await api.get<TypeDocument[]>('/api/v1/type-documents');
+  const response = await api.get<TypeDocument[]>('/api/v1/document-types');
   return response.data;
 }
 
 export async function getTypeDocument(id: string): Promise<TypeDocument> {
-  const response = await api.get<TypeDocument>(`/api/v1/type-documents/${id}`);
+  const response = await api.get<TypeDocument>(`/api/v1/document-types/${id}`);
   return response.data;
 }

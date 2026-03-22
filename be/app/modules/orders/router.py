@@ -5,8 +5,8 @@ Descripción: Rutas API para gestión de órdenes en el dashboard del jefe.
 ¿Nota? Actualmente retorna respuestas vacías hasta que se migre completa la estructura.
 """
 
+import uuid
 from typing import Annotated
-from uuid import UUID
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status
@@ -17,6 +17,8 @@ from app.core.dependencies import get_db, get_current_user
 from app.models.order import Order, OrderStatus, OrderDetail
 from app.models.user import User
 from app.models.product import Product
+from app.models.inventory import Inventory
+from app.models.inventory_movement import InventoryMovement, InventoryMovementType
 from app.modules.orders.schemas import (
     OrderResponse,
     OrderListResponse,
@@ -144,6 +146,8 @@ def list_orders(
             items=[_order_to_response(order) for order in orders],
         )
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Error en list_orders: {e}")
         # Retornar respuesta vacía en caso de error
         return OrderListResponse(total=0, page=page, page_size=page_size, total_pages=0, items=[])
@@ -151,7 +155,7 @@ def list_orders(
 
 @router.get("/{order_id}", response_model=OrderDetailResponse)
 def get_order_detail(
-    order_id: UUID,
+    order_id: uuid.UUID,
     db: Annotated[Session, Depends(get_db)],
 ) -> OrderDetailResponse:
     """
@@ -210,7 +214,7 @@ def create_order(
             creation_date=datetime.now(timezone.utc),
         )
         
-        # Agregar líneas de pedido
+        # Agregar líneas de pedido (SIN descontar stock físico)
         for detail_data in order_data.details:
             detail = OrderDetail(
                 product_id=detail_data.product_id,
@@ -219,6 +223,7 @@ def create_order(
                 amount=detail_data.amount,
                 state=OrderStatus.pendiente,
                 order_date=datetime.now(timezone.utc),
+                created_by=current_user.id
             )
             new_order.details.append(detail)
         
@@ -238,7 +243,7 @@ def create_order(
 
 @router.patch("/{order_id}/status", response_model=OrderDetailResponse)
 def update_order_status(
-    order_id: UUID,
+    order_id: uuid.UUID,
     order_update: OrderUpdateStatusRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
@@ -260,6 +265,72 @@ def update_order_status(
         if not order:
             raise HTTPException(status_code=404, detail="Orden no encontrada")
 
+        # Nota: Si un pedido se marca como 'completado' por error y luego se revierte a otro estado,
+        # el stock se restaurará automáticamente.
+        # Esto permite corregir errores de despacho sin intervención manual en el inventario.
+        # --- Lógica de Inventario Segura ---
+        
+        # 1. Caso: El pedido pasa a 'completado' -> DESCONTAR STOCK REAL
+        if order_update.state == OrderStatus.completado and order.state != OrderStatus.completado:
+            # Validar stock para todas las líneas antes de proceder
+            for detail in order.details:
+                stmt = select(Inventory).where(
+                    (Inventory.product_id == detail.product_id) &
+                    (Inventory.size == detail.size) &
+                    (Inventory.deleted_at == None)
+                )
+                inventory_item = db.execute(stmt).scalar_one_or_none()
+                
+                if not inventory_item or inventory_item.amount < detail.amount:
+                    product_name = db.execute(select(Product.name_product).where(Product.id == detail.product_id)).scalar() or "desconocido"
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Stock insuficiente para {product_name} (Talla: {detail.size}). "
+                               f"Se requieren {detail.amount} y solo hay {inventory_item.amount if inventory_item else 0} en bodega."
+                    )
+                
+                # Descontar físicamente
+                inventory_item.amount -= detail.amount
+                
+                # Registrar el despacho físico
+                db.add(InventoryMovement(
+                    id=uuid.uuid4(),
+                    product_id=detail.product_id,
+                    user_id=current_user.id,
+                    type_of_movement=InventoryMovementType.salida,
+                    size=detail.size,
+                    colour=detail.colour,
+                    amount=detail.amount,
+                    reason=f"Despacho por pedido completado: {order.id}",
+                    movement_date=datetime.now(timezone.utc)
+                ))
+        
+        # 2. Caso: El pedido ya estaba 'completado' y ahora cambia a otro estado -> RESTAURAR STOCK
+        elif order.state == OrderStatus.completado and order_update.state != OrderStatus.completado:
+            for detail in order.details:
+                stmt = select(Inventory).where(
+                    (Inventory.product_id == detail.product_id) &
+                    (Inventory.size == detail.size) &
+                    (Inventory.deleted_at == None)
+                )
+                inventory_item = db.execute(stmt).scalar_one_or_none()
+                
+                if inventory_item:
+                    inventory_item.amount += detail.amount
+                    
+                    # Registrar devolución al almacén
+                    db.add(InventoryMovement(
+                        id=uuid.uuid4(),
+                        product_id=detail.product_id,
+                        user_id=current_user.id,
+                        type_of_movement=InventoryMovementType.entrada,
+                        size=detail.size,
+                        colour=detail.colour,
+                        amount=detail.amount,
+                        reason=f"Devolución: Pedido # {order.id} cambió de completado a {order_update.state.value}",
+                        movement_date=datetime.now(timezone.utc)
+                    ))
+        
         # Actualizar con el campo correcto 'state'
         order.state = order_update.state
         db.commit()
@@ -276,7 +347,7 @@ def update_order_status(
 
 @router.put("/{order_id}", response_model=OrderDetailResponse)
 def update_order_details(
-    order_id: UUID,
+    order_id: uuid.UUID,
     order_data: OrderUpdateDetailsRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
@@ -310,8 +381,10 @@ def update_order_details(
         )
 
     try:
+        # 1. Eliminar detalles antiguos
         db.execute(sa_delete(OrderDetail).where(OrderDetail.order_id == order.id))
 
+        # 2. Crear los NUEVOS detalles (SIN tocar inventario físico)
         total_pairs = 0
         for detail_data in order_data.details:
             detail = OrderDetail(
@@ -322,14 +395,17 @@ def update_order_details(
                 amount=detail_data.amount,
                 state=order.state,
                 order_date=datetime.now(timezone.utc),
+                created_by=current_user.id
             )
             db.add(detail)
             total_pairs += detail_data.amount
 
+        # 4. Actualizar cabecera del pedido
         order.total_pairs = total_pairs
         if order_data.delivery_date is not None:
             order.delivery_date = order_data.delivery_date
 
+        order.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(order)
         return _order_to_detail_response(order)
@@ -343,7 +419,7 @@ def update_order_details(
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_order(
-    order_id: UUID,
+    order_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:

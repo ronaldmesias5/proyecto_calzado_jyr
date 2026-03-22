@@ -16,17 +16,17 @@ export function Alert({ type, message, onClose }: AlertProps) {
     success: {
       bg: "bg-green-50 border-green-200",
       text: "text-green-800",
-      icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+      icon: <CheckCircle className="h-5 w-5 text-green-500" aria-hidden="true" />,
     },
     error: {
       bg: "bg-red-50 border-red-200",
       text: "text-red-800",
-      icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+      icon: <AlertCircle className="h-5 w-5 text-red-500" aria-hidden="true" />,
     },
     info: {
       bg: "bg-blue-50 border-blue-200",
       text: "text-blue-800",
-      icon: <Info className="h-5 w-5 text-blue-500" />,
+      icon: <Info className="h-5 w-5 text-blue-500" aria-hidden="true" />,
     },
   };
 
@@ -45,7 +45,7 @@ export function Alert({ type, message, onClose }: AlertProps) {
           className={`shrink-0 ${style.text} hover:opacity-70`}
           aria-label="Cerrar alerta"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
       )}
     </div>

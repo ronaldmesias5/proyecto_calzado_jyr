@@ -48,17 +48,28 @@ router = APIRouter(
 def get_metrics(db: Session = Depends(get_db)) -> DashboardMetricsResponse:
     """Retorna los KPIs principales desde la BD (0 si sin datos)."""
     from app.models.order import Order, OrderStatus
+    from app.models.inventory import Inventory
+    from sqlalchemy import func
     
-    # Usar el campo 'state' en lugar de 'status'
-    pending = db.query(Order).filter(Order.state == OrderStatus.PENDING).count()
-    production = db.query(Order).filter(Order.state == OrderStatus.IN_PRODUCTION).count()
+    # 1. Pedidos por estado
+    pending = db.query(Order).filter(Order.state == OrderStatus.pendiente).count()
+    production = db.query(Order).filter(Order.state == OrderStatus.en_progreso).count()
+    
+    # 2. Stock total (sumatoria de todas las tallas/colores)
+    total_stock = db.query(func.sum(Inventory.amount)).scalar() or 0
+    
+    # 3. Alertas (productos con stock <= stock mínimo)
+    low_stock_alerts = db.query(Inventory).filter(
+        (Inventory.amount <= Inventory.minimum_stock) & 
+        (Inventory.deleted_at == None)
+    ).count()
     
     return DashboardMetricsResponse(
         metrics=[
-            MetricSchema(label="Pedidos Pendientes", value=pending, change="0%", change_positive=True),
-            MetricSchema(label="En Producción", value=production, change="0%", change_positive=True),
-            MetricSchema(label="Stock Disponible", value=0, change="0%", change_positive=False),
-            MetricSchema(label="Alertas Activas", value=0, change="0", change_positive=False),
+            MetricSchema(label="Pedidos Pendientes", value=pending, change="Refrescado", change_positive=True),
+            MetricSchema(label="En Producción", value=production, change="Refrescado", change_positive=True),
+            MetricSchema(label="Pares en Stock", value=int(total_stock), change="Total", change_positive=True),
+            MetricSchema(label="Alertas de Stock", value=low_stock_alerts, change="Bajo mínimo", change_positive=False),
         ]
     )
 
@@ -98,7 +109,26 @@ def get_recent_orders(db: Session = Depends(get_db)) -> RecentOrdersResponse:
     response_model=AlertsResponse,
     summary="Alertas activas del sistema",
 )
-def get_alerts() -> AlertsResponse:
-    """Retorna las alertas activas (vacío si no hay datos)."""
-    return AlertsResponse(alerts=[])
+def get_alerts(db: Session = Depends(get_db)) -> AlertsResponse:
+    """Retorna las alertas de stock bajo."""
+    from app.models.inventory import Inventory
+    from app.models.product import Product
+    
+    low_stock_items = db.query(Inventory).join(Product).filter(
+        (Inventory.amount <= Inventory.minimum_stock) & 
+        (Inventory.deleted_at == None)
+    ).all()
+    
+    alerts = []
+    for item in low_stock_items:
+        product_name = item.product.name_product if item.product else "Desconocido"
+        alerts.append(AlertSchema(
+            id=str(item.id),
+            type="warning",
+            title="Stock Bajo",
+            message=f"El producto {product_name} (Talla: {item.size}) está bajo el mínimo ({int(item.amount)}/{item.minimum_stock}).",
+            time="Ahora"
+        ))
+        
+    return AlertsResponse(alerts=alerts)
 
