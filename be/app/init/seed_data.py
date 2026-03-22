@@ -34,7 +34,7 @@ from app.models.brand import Brand
 from app.models.style import Style
 from app.models.category import Category
 from app.models.inventory import Inventory
-from app.models.order import Order, OrderItem, OrderStatus
+from app.models.order import Order, OrderDetail, OrderStatus
 from app.utils.security import hash_password
 import random
 
@@ -160,7 +160,7 @@ def seed_orders(db: Session) -> bool:
         
         print("🔄 Insertando órdenes mayoristas de prueba...")
         
-        from app.models.order import OrderItem
+        from app.models.order import OrderDetail
         
         now = datetime.now(timezone.utc)
         
@@ -174,10 +174,9 @@ def seed_orders(db: Session) -> bool:
                 contact_email="juan.perez@calzadoperez.com",
                 contact_phone="+57 310 234 5678",
                 contact_address="Cra 15 #45-23, Bogotá",
-                total_items=150,
+                total_pairs=150,
                 delivery_date=now + timedelta(days=15),
-                notes="Cliente mayorista preferencial. Requiere empaque especial.",
-                status=OrderStatus.PENDING,
+                state=OrderStatus.pendiente,
                 created_at=now - timedelta(days=5),
             ),
             # Orden 2: En Producción con 1 estilo
@@ -245,24 +244,24 @@ def seed_orders(db: Session) -> bool:
         # Agregar items (líneas de pedido) a cada orden
         items_map = {
             0: [  # Orden 1: For One y Super Star
-                OrderItem(id=uuid.uuid4(), style_name="For One", style_category="Caballero", size="39", quantity=50),
-                OrderItem(id=uuid.uuid4(), style_name="For One", style_category="Caballero", size="40", quantity=50),
-                OrderItem(id=uuid.uuid4(), style_name="Super Star", style_category="Caballero", size="41", quantity=50),
+                OrderDetail(id=uuid.uuid4(), size="39", amount=50),
+                OrderDetail(id=uuid.uuid4(), size="40", amount=50),
+                OrderDetail(id=uuid.uuid4(), size="41", amount=50),
             ],
             1: [  # Orden 2: Puma California
-                OrderItem(id=uuid.uuid4(), style_name="Puma California", style_category="Caballero", size="38", quantity=100),
-                OrderItem(id=uuid.uuid4(), style_name="Puma California", style_category="Caballero", size="39", quantity=100),
+                OrderDetail(id=uuid.uuid4(), size="38", amount=100),
+                OrderDetail(id=uuid.uuid4(), size="39", amount=100),
             ],
             2: [  # Orden 3: Nike Runner
-                OrderItem(id=uuid.uuid4(), style_name="Nike Runner", style_category="Caballero", size="40", quantity=48),
-                OrderItem(id=uuid.uuid4(), style_name="Nike Runner", style_category="Caballero", size="41", quantity=48),
+                OrderDetail(id=uuid.uuid4(), size="40", amount=48),
+                OrderDetail(id=uuid.uuid4(), size="41", amount=48),
             ],
             3: [  # Orden 4: Adidas Classic
-                OrderItem(id=uuid.uuid4(), style_name="Adidas Classic", style_category="Dama", size="35", quantity=60),
-                OrderItem(id=uuid.uuid4(), style_name="Adidas Classic", style_category="Dama", size="36", quantity=60),
+                OrderDetail(id=uuid.uuid4(), size="35", amount=60),
+                OrderDetail(id=uuid.uuid4(), size="36", amount=60),
             ],
             4: [  # Orden 5: Elegance Pro
-                OrderItem(id=uuid.uuid4(), style_name="Elegance Pro", style_category="Caballero", size="42", quantity=60),
+                OrderDetail(id=uuid.uuid4(), size="42", amount=60),
             ],
         }
         
