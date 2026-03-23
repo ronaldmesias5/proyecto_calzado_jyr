@@ -1,15 +1,15 @@
 # Sistema de Gestión y Producción de Calzado - CALZADO J&R
 
-**Proyecto Scrum Modular - 10 Sprints**
+**Proyecto Scrum Modular - Entregable Final Revisado**
 
 ---
 
 ## 📋 Descripción General
 
-Sistema completo de gestión y producción de calzado con 3 dashboards especializados:
-- **Dashboard Jefe**: Validación de cuentas, gestión de catálogo, revisión de pedidos
-- **Dashboard Empleados**: Visualización de tareas asignadas, confirmación de finalización
-- **Dashboard Clientes**: Visualización de catálogo, realización de pedidos, seguimiento
+Sistema integral para la gestión y producción de calzado, diseñado con una arquitectura modular para escalar eficientemente. El sistema ofrece tres dashboards especializados:
+- **Dashboard Jefe**: Supervisión total, validación de clientes, gestión de empleados, catálogo y pedidos.
+- **Dashboard Empleados**: Control de tareas asignadas (cortado, guarnecido, solado, emplantillado) y seguimiento de producción.
+- **Dashboard Clientes**: Acceso al catálogo dinámico, realización de pedidos y seguimiento en tiempo real.
 
 ---
 
@@ -17,161 +17,120 @@ Sistema completo de gestión y producción de calzado con 3 dashboards especiali
 
 ```
 scrum/
-├── be/                          # Backend - FastAPI + Python
+├── be/                          # 🐍 Backend - FastAPI + Python (uv)
 │   ├── app/
-│   │   ├── modules/             # 📦 Módulos funcionales (feature-based)
-│   │   │   ├── auth/            # 🔐 Autenticación
-│   │   │   ├── admin/           # 👨‍💼 Administración
-│   │   │   ├── users/           # 👤 Usuarios
-│   │   │   ├── type-document/   # 📋 Tipos de documento
-│   │   │   ├── dashboard-jefe/  # 👨‍💼 Dashboard Jefe
-│   │   │   ├── dashboard-empleados/ # 👷 Dashboard Empleados
-│   │   │   ├── dashboard-clientes/  # 🛒 Dashboard Clientes
-│   │   │   └── landing/         # 🏠 Página inicial
-│   │   │
-│   │   ├── shared/              # 🔄 Recursos compartidos
-│   │   │   ├── models/          # Modelos base
-│   │   │   ├── schemas/         # Schemas globales
-│   │   │   ├── utils/           # Funciones auxiliares
-│   │   │   ├── exceptions/      # Excepciones
-│   │   │   └── dependencies.py  # Dependencias globales
-│   │   │
-│   │   ├── config.py            # Configuración
-│   │   ├── database.py          # Conexión BD
+│   │   ├── core/                # Configuración, BD, dependencias y seguridad
+│   │   ├── models/              # Modelos SQLAlchemy (entidades)
+│   │   ├── modules/             # 📦 Módulos de lógica de negocio (feature-based)
+│   │   │   ├── auth/            # Registro, login, logout global, consentimientos
+│   │   │   ├── admin/           # Gestión de usuarios y validaciones
+│   │   │   └── ...              # Catálogo, Pedidos, Producción
+│   │   ├── utils/               # Sanitizado, emails, seguridad
 │   │   └── main.py              # Punto de entrada
-│   ├── tests/                   # Tests unitarios e integración
-│   ├── alembic/                 # Migraciones de BD
-│   └── requirements.txt          # Dependencias Python
+│   ├── pyproject.toml           # Gestión de dependencias (uv)
+│   └── .env.example             # Plantilla de variables de entorno
 │
-├── fe/                          # Frontend - React + TypeScript
+├── fe/                          # ⚛️ Frontend - React + TypeScript (Vite + pnpm)
 │   ├── src/
-│   │   ├── modules/             # 📦 Módulos funcionales (feature-based)
-│   │   │   ├── auth/            # 🔐 Autenticación (Sprint 1-2)
-│   │   │   │   ├── pages/
-│   │   │   │   │   ├── LoginPage.tsx
-│   │   │   │   │   ├── RegisterPage.tsx
-│   │   │   │   │   ├── ForgotPasswordPage.tsx
-│   │   │   │   │   ├── ResetPasswordPage.tsx
-│   │   │   │   │   └── ChangePasswordPage.tsx
-│   │   │   │   ├── components/
-│   │   │   │   │   ├── LoginForm.tsx
-│   │   │   │   │   ├── RegisterForm.tsx
-│   │   │   │   │   └── PasswordForm.tsx
-│   │   │   │   ├── services/
-│   │   │   │   │   └── authService.ts
-│   │   │   │   └── hooks/
-│   │   │   │       └── useAuth.ts
-│   │   │   │
-│   │   │   ├── landing/         # 🏠 Página inicial (Sprint 3)
-│   │   │   │   ├── pages/
-│   │   │   │   │   └── LandingPage.tsx
-│   │   │   │   └── components/
-│   │   │   │       ├── Hero.tsx
-│   │   │   │       ├── Features.tsx
-│   │   │   │       └── CatalogPreview.tsx
-│   │   │   │
-│   │   │   ├── dashboard-jefe/  # 👨‍💼 Dashboard Jefe (Sprint 3+)
-│   │   │   │   ├── pages/
-│   │   │   │   │   ├── DashboardPage.tsx
-│   │   │   │   │   ├── ClientsPage.tsx
-│   │   │   │   │   ├── ProductsPage.tsx
-│   │   │   │   │   └── OrdersPage.tsx
-│   │   │   │   └── components/
-│   │   │   │       ├── ClientValidation/
-│   │   │   │       ├── ProductCatalog/
-│   │   │   │       ├── OrderManagement/
-│   │   │   │       └── Stats/
-│   │   │   │
-│   │   │   ├── dashboard-empleados/  # 👷 Dashboard Empleados (Sprint 7+)
-│   │   │   │   ├── pages/
-│   │   │   │   │   ├── DashboardPage.tsx
-│   │   │   │   │   ├── TasksPage.tsx
-│   │   │   │   │   └── ProductionPage.tsx
-│   │   │   │   └── components/
-│   │   │   │       ├── TaskList/
-│   │   │   │       ├── TaskDetail/
-│   │   │   │       └── ProgressTracker/
-│   │   │   │
-│   │   │   └── dashboard-clientes/   # 🛒 Dashboard Clientes (Sprint 4+)
-│   │   │       ├── pages/
-│   │   │       │   ├── DashboardPage.tsx
-│   │   │       │   ├── CatalogPage.tsx
-│   │   │       │   ├── OrdersPage.tsx
-│   │   │       │   └── OrderDetailPage.tsx
-│   │   │       └── components/
-│   │   │           ├── Catalog/
-│   │   │           │   ├── ProductCard.tsx
-│   │   │           │   ├── SearchFilter.tsx
-│   │   │           │   └── ProductGrid.tsx
-│   │   │           ├── Orders/
-│   │   │           │   ├── OrderForm.tsx
-│   │   │           │   ├── OrderList.tsx
-│   │   │           │   └── OrderStatus.tsx
-│   │   │           └── Favorites/
-│   │   │               └── FavoritesList.tsx
-│   │   │
-│   │   ├── shared/              # 🔄 Recursos Compartidos
-│   │   │   ├── components/
-│   │   │   │   ├── layout/
-│   │   │   │   │   ├── Header.tsx
-│   │   │   │   │   ├── Footer.tsx
-│   │   │   │   │   ├── Sidebar.tsx
-│   │   │   │   │   └── AuthLayout.tsx
-│   │   │   │   ├── ui/
-│   │   │   │   │   ├── Button.tsx
-│   │   │   │   │   ├── Input.tsx
-│   │   │   │   │   ├── Alert.tsx
-│   │   │   │   │   ├── Modal.tsx
-│   │   │   │   │   └── LoadingSpinner.tsx
-│   │   │   │   └── ProtectedRoute.tsx
-│   │   │   ├── services/
-│   │   │   │   ├── api/
-│   │   │   │   │   ├── auth.ts
-│   │   │   │   │   ├── axios.ts
-│   │   │   │   │   └── type-documents.ts
-│   │   │   │   └── storage.ts
-│   │   │   ├── hooks/
-│   │   │   │   ├── useAuth.ts
-│   │   │   │   ├── useApi.ts
-│   │   │   │   └── useLocalStorage.ts
-│   │   │   ├── context/
-│   │   │   │   ├── AuthContext.tsx
-│   │   │   │   └── authContextDef.ts
-│   │   │   ├── types/
-│   │   │   │   ├── auth.ts
-│   │   │   │   ├── user.ts
-│   │   │   │   ├── product.ts
-│   │   │   │   └── order.ts
-│   │   │   └── styles/
-│   │   │       └── index.css
-│   │   │
-│   │   ├── App.tsx              # Componente raíz
-│   │   └── main.tsx             # Punto de entrada
-│   │
-│   ├── public/                  # Archivos estáticos
-│   ├── package.json             # Dependencias Node
-│   ├── vite.config.ts           # Configuración Vite
-│   └── tsconfig.json            # Configuración TypeScript
+│   │   ├── modules/             # 📦 Módulos funcionales
+│   │   │   ├── auth/            # Login, Registro (con términos), Password
+│   │   │   ├── dashboard-jefe/  # Gestión total (incluye borrar usuarios)
+│   │   │   └── ...              # Landing, Clientes, Empleados
+│   │   ├── shared/              # Componentes UI, hooks, servicios API
+│   │   ├── context/             # AuthContext (estado Global)
+│   │   └── types/               # Tipado estricto (espejo del backend)
+│   └── package.json             # Dependencias Node.js
 │
-├── db/                          # Base de datos
-│   ├── init/                    # Scripts de inicialización
-│   └── postgres/                # Volumen de persistencia
+├── db/                          # 🗄️ Base de Datos
+│   └── init/                    # Scripts DDL y Semillas (SQL)
 │
-├── docs/                        # Documentación Scrum
-│   ├── project-documentation/   # 📚 Documentación del Proyecto
-│   │   ├── historias_de_usuario.md
-│   │   ├── plan_de_trabajo.md
-│   │   ├── arquitectura_proyecto.md
-│   │   ├── estructura_modular.md
-│   │   ├── estado_proyecto.md
-│   │   └── basededatos.drawio.png
-│   └── sprints/                 # 📋 Backlogs de Sprints
-│       ├── backlog_sprint_1.md  # Sprint 1: Autenticación
-│       └── backlog_sprint_2.md  # Sprint 2: Gestión de Cuentas
+├── docs/                        # 📚 Documentación Scrum
+│   ├── project-documentation/   # Historias, MER, Arquitectura
+│   └── sprints/                 # Backlogs y Estados
 │
 ├── docker-compose.yml           # Orquestación de contenedores
-├── .env.example                 # Variables de ejemplo
-└── .gitignore
+└── .env.example                 # Variables globales de ejemplo
+```
+
+---
+
+## 🛠️ Stack Tecnológico
+
+### 🐍 Backend
+- **FastAPI**: Alto rendimiento y validación automática con Pydantic.
+- **Python 3.12+ (uv)**: Gestión de paquetes moderna y veloz.
+- **SQLAlchemy 2.0**: ORM robusto con tipado estático.
+- **JWT (python-jose)**: Autenticación segura con versionado de sesiones (Logout Global).
+
+### ⚛️ Frontend
+- **React 18+ (Vite)**: Interfaz reactiva y rápida.
+- **TypeScript**: Seguridad en tiempo de desarrollo.
+- **TailwindCSS 4**: Diseño premium, moderno y responsive.
+- **Lucide Icons**: Iconografía profesional.
+
+### 🗄️ Infraestructura y Base de Datos
+- **PostgreSQL 17+**: Base de datos relacional robusta.
+- **Docker / Docker Compose**: Despliegue consistente en cualquier entorno.
+
+---
+
+## 🚀 Inicio Rápido (Local)
+
+### 1. Variables de Entorno
+```bash
+cp .env.example .env
+```
+
+### 2. Infraestructura (Docker)
+Levante la base de datos y/o todo el entorno:
+```bash
+docker-compose up -d
+```
+
+### 3. Backend (Vía uv)
+```bash
+cd be
+uv sync
+uv run uvicorn app.main:app --reload
+```
+*API Docs:* http://localhost:8000/docs
+
+### 4. Frontend (Vía pnpm)
+```bash
+cd fe
+pnpm install
+pnpm run dev
+```
+*App URL:* http://localhost:5173
+
+---
+
+## 🔐 Credenciales de Prueba (Default)
+
+Al iniciar por primera vez, el sistema autosemilla un usuario administrador:
+- **Email**: `admin@calzadojyr.com`
+- **Contraseña**: `AdminSegura123!`
+
+---
+
+## ✨ Características Destacadas (Resumen Final)
+
+- **Cierre de Sesión Global**: Permite al usuario invalidar todos sus tokens activos desde cualquier dispositivo (seguridad RT-004).
+- **Cumplimiento Ético y Legal**: Seguimiento estricto del consentimiento de términos y condiciones durante el registro.
+- **Gestión Rigurosa de Usuarios**: El "Jefe" puede borrar permanentemente cuentas de empleados o clientes, con protección contra auto-eliminación.
+- **Validación de Cuentas**: Los nuevos clientes son bloqueados hasta que el Jefe valida manualmente su identidad y datos comerciales.
+- **Diseño Premium**: Interfaz moderna con breadcrumbs dinámicas, modales de confirmación y micro-animaciones.
+
+---
+
+## 👥 Equipo y Autores
+- **Ronald Mesias** - Líder de Proyecto / Arquitecto FullStack
+- **Andrés** - Scrum Master
+- **Santiago** - DB / Infra
+
+---
+
+© 2026 CALZADO J&R - Calidad y Estilo en cada paso.
 
 ```
 
