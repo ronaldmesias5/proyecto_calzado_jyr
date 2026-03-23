@@ -1,7 +1,5 @@
 # Sistema de Gestión y Producción de Calzado - CALZADO J&R
 
-**Proyecto Scrum Modular - Entregable Final Revisado**
-
 ---
 
 ## 📋 Descripción General
