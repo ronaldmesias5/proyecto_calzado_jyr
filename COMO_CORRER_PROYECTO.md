@@ -13,8 +13,13 @@ cd calzado-jyr
 cp .env.example .env
 ```
 
-**Para DEVELOPMENT local:**
-- No cambiar nada en `.env` — ya trae valores de ejemplo
+**Para DEVELOPMENT local (IMPORTANTE):**
+⚠️ Debes generar un `SECRET_KEY` válido antes de continuar:
+```bash
+# En Windows PowerShell o terminal Unix
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+Copia el resultado y actualiza la variable `SECRET_KEY` en `.env`
 
 **Para PRODUCTION:**
 ```bash

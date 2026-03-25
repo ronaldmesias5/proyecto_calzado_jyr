@@ -90,8 +90,6 @@ class Incidence(Base):
     # 🔗 Relaciones
     # ────────────────────────────
 
-    task = relationship("Task", foreign_keys=[task_id], back_populates="incidences", lazy="selectin")
-
     def __repr__(self) -> str:
         return f"Incidence(id={self.id}, task_id={self.task_id}, state={self.state})"
 
