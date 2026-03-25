@@ -21,7 +21,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, ENUM
 
 # ¿Qué? Identificadores que Alembic usa para construir el grafo de migraciones.
 # ¿Para qué? down_revision=None indica que esta es la primera migración (raíz).
@@ -42,22 +42,35 @@ def upgrade() -> None:
     """
 
     # ══════════════════════════════════════════════════════════
-    # PASO 0: Crear extensiones necesarias
+    # NOTA: Las extensiones PostgreSQL (uuid-ossp, pg_trgm) se crean en db/init/init.sql
+    #       como parte del bootstrap técnico de PostgreSQL.
+    #       Las migraciones Alembic solo gestionan tablas, índices y datos de negocio.
     # ══════════════════════════════════════════════════════════
-    op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
 
     # ══════════════════════════════════════════════════════════
-    # PASO 1: Crear tipos ENUM
+    # PASO 1: Crear tipos ENUM (usando DO block para idempotencia)
     # ══════════════════════════════════════════════════════════
-    op.execute("CREATE TYPE occupation_type AS ENUM ('jefe', 'cortador', 'guarnecedor', 'solador', 'emplantillador')")
-    op.execute("CREATE TYPE supplies_movement_type AS ENUM ('entrada', 'salida')")
-    op.execute("CREATE TYPE inventory_movement_type AS ENUM ('entrada', 'salida', 'ajuste')")
-    op.execute("CREATE TYPE order_status AS ENUM ('pendiente', 'en_progreso', 'completado', 'cancelado')")
-    op.execute("CREATE TYPE task_status AS ENUM ('pendiente', 'en_progreso', 'completado', 'cancelado')")
-    op.execute("CREATE TYPE task_priority AS ENUM ('baja', 'media', 'alta')")
-    op.execute("CREATE TYPE task_type AS ENUM ('corte', 'guarnicion', 'soladura', 'emplantillado')")
-    op.execute("CREATE TYPE incidence_status AS ENUM ('abierta', 'en_progreso', 'resuelta', 'cerrada')")
-    op.execute("CREATE TYPE notification_type AS ENUM ('info', 'advertencia', 'error', 'exito')")
+    enums = {
+        "occupation_type": "('jefe', 'cortador', 'guarnecedor', 'solador', 'emplantillador')",
+        "supplies_movement_type": "('entrada', 'salida')",
+        "inventory_movement_type": "('entrada', 'salida', 'ajuste')",
+        "order_status": "('pendiente', 'en_progreso', 'completado', 'cancelado')",
+        "task_status": "('pendiente', 'en_progreso', 'completado', 'cancelado')",
+        "task_priority": "('baja', 'media', 'alta')",
+        "task_type": "('corte', 'guarnicion', 'soladura', 'emplantillado')",
+        "incidence_status": "('abierta', 'en_progreso', 'resuelta', 'cerrada')",
+        "notification_type": "('info', 'advertencia', 'error', 'exito')"
+    }
+
+    for name, values in enums.items():
+        op.execute(f"""
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = '{name}') THEN
+                    CREATE TYPE {name} AS ENUM {values};
+                END IF;
+            END $$;
+        """)
 
     # ══════════════════════════════════════════════════════════
     # PASO 2: Tabla roles (base de toda la estructura de permisos)
@@ -106,7 +119,7 @@ def upgrade() -> None:
         sa.Column("is_validated", sa.Boolean(), nullable=False, server_default=sa.text("FALSE")),
         sa.Column("must_change_password", sa.Boolean(), nullable=False, server_default=sa.text("FALSE")),
         sa.Column("business_name", sa.String(255), nullable=True),
-        sa.Column("occupation", sa.Enum("jefe", "cortador", "guarnecedor", "solador", "emplantillador", name="occupation_type"), nullable=True),
+        sa.Column("occupation", ENUM("jefe", "cortador", "guarnecedor", "solador", "emplantillador", name="occupation_type", create_type=False), nullable=True),
         sa.Column("session_version", sa.Integer(), nullable=False, server_default=sa.text("1")),
         sa.Column("accepted_terms", sa.Boolean(), nullable=False, server_default=sa.text("FALSE")),
         sa.Column("terms_accepted_at", sa.DateTime(timezone=True), nullable=True),
@@ -131,9 +144,9 @@ def upgrade() -> None:
     op.create_index("ix_users_created_by", "users", ["created_by"])
     op.create_index("ix_users_updated_by", "users", ["updated_by"])
     op.create_index("ix_users_deleted_at", "users", ["deleted_at"])
-    op.create_index("ix_users_email_active", "users", ["email"], postgresql_where=sa.text("deleted_at IS NULL"))
-    op.create_index("ix_users_role_id_active", "users", ["role_id"], postgresql_where=sa.text("deleted_at IS NULL"))
-    op.create_index("ix_users_role_validated", "users", ["role_id", "is_validated"], postgresql_where=sa.text("deleted_at IS NULL"))
+    op.create_index("ix_users_email_active", "users", ["email"])
+    op.create_index("ix_users_role_id_active", "users", ["role_id"])
+    op.create_index("ix_users_role_validated", "users", ["role_id", "is_validated"])
 
     # ══════════════════════════════════════════════════════════
     # PASO 5: Tabla password_reset_tokens (recuperación de contraseña)
@@ -185,7 +198,7 @@ def upgrade() -> None:
         sa.Column("id", UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
         sa.Column("supplies_id", UUID(as_uuid=True), nullable=False),
         sa.Column("user_id", UUID(as_uuid=True), nullable=False),
-        sa.Column("type_of_movement", sa.Enum("entrada", "salida", name="supplies_movement_type"), nullable=False),
+        sa.Column("type_of_movement", ENUM("entrada", "salida", name="supplies_movement_type", create_type=False), nullable=False),
         sa.Column("amount", sa.Numeric(10, 2), nullable=False),
         sa.Column("colour", sa.String(100), nullable=True),
         sa.Column("size", sa.String(50), nullable=True),
@@ -330,7 +343,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_inventory_product_id", "inventory", ["product_id"])
     op.create_index("ix_inventory_product_size_colour", "inventory", ["product_id", "size", "colour"])
-    op.create_index("ix_inventory_minimum_stock", "inventory", ["minimum_stock"], postgresql_where=sa.text("amount <= minimum_stock"))
+    op.create_index("ix_inventory_minimum_stock", "inventory", ["minimum_stock"])
 
     # ══════════════════════════════════════════════════════════
     # PASO 13: Tabla inventory_movement (movimientos de inventario)
@@ -340,7 +353,7 @@ def upgrade() -> None:
         sa.Column("id", UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
         sa.Column("product_id", UUID(as_uuid=True), nullable=False),
         sa.Column("user_id", UUID(as_uuid=True), nullable=False),
-        sa.Column("type_of_movement", sa.Enum("entrada", "salida", "ajuste", name="inventory_movement_type"), nullable=False),
+        sa.Column("type_of_movement", ENUM("entrada", "salida", "ajuste", name="inventory_movement_type", create_type=False), nullable=False),
         sa.Column("size", sa.String(50), nullable=True),
         sa.Column("colour", sa.String(100), nullable=True),
         sa.Column("amount", sa.Numeric(10, 2), nullable=False),
@@ -369,9 +382,9 @@ def upgrade() -> None:
         sa.Column("id", UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
         sa.Column("assigned_to", UUID(as_uuid=True), nullable=False),
         sa.Column("description_task", sa.Text(), nullable=False),
-        sa.Column("priority", sa.Enum("baja", "media", "alta", name="task_priority"), nullable=False),
-        sa.Column("type", sa.Enum("corte", "guarnicion", "soladura", "emplantillado", name="task_type"), nullable=False),
-        sa.Column("status", sa.Enum("pendiente", "en_progreso", "completado", "cancelado", name="task_status"), nullable=False, server_default=sa.text("'pendiente'")),
+        sa.Column("priority", ENUM("baja", "media", "alta", name="task_priority", create_type=False), nullable=False),
+        sa.Column("type", ENUM("corte", "guarnicion", "soladura", "emplantillado", name="task_type", create_type=False), nullable=False),
+        sa.Column("status", ENUM("pendiente", "en_progreso", "completado", "cancelado", name="task_status", create_type=False), nullable=False, server_default=sa.text("'pendiente'")),
         sa.Column("deadline", sa.DateTime(timezone=True), nullable=True),
         sa.Column("assignment_date", sa.DateTime(timezone=True), nullable=False),
         sa.Column("created_by", UUID(as_uuid=True), nullable=True),
@@ -389,8 +402,8 @@ def upgrade() -> None:
     op.create_index("ix_tasks_assigned_to", "tasks", ["assigned_to"])
     op.create_index("ix_tasks_status", "tasks", ["status"])
     op.create_index("ix_tasks_created_by", "tasks", ["created_by"])
-    op.create_index("ix_tasks_deadline", "tasks", ["deadline"], postgresql_where=sa.text("deadline IS NOT NULL"))
-    op.create_index("ix_tasks_by_status_deadline", "tasks", ["status", "deadline"], postgresql_where=sa.text("deadline IS NOT NULL"))
+    op.create_index("ix_tasks_deadline", "tasks", ["deadline"])
+    op.create_index("ix_tasks_by_status_deadline", "tasks", ["status", "deadline"])
 
     # ══════════════════════════════════════════════════════════
     # PASO 15: Tabla orders (pedidos de clientes)
@@ -400,7 +413,7 @@ def upgrade() -> None:
         sa.Column("id", UUID(as_uuid=True), nullable=False, server_default=sa.text("uuid_generate_v4()")),
         sa.Column("customer_id", UUID(as_uuid=True), nullable=False),
         sa.Column("total_pairs", sa.Integer(), nullable=False),
-        sa.Column("state", sa.Enum("pendiente", "en_progreso", "completado", "cancelado", name="order_status"), nullable=False, server_default=sa.text("'pendiente'")),
+        sa.Column("state", ENUM("pendiente", "en_progreso", "completado", "cancelado", name="order_status", create_type=False), nullable=False, server_default=sa.text("'pendiente'")),
         sa.Column("delivery_date", sa.DateTime(timezone=True), nullable=True),
         sa.Column("creation_date", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("NOW()")),
         sa.Column("created_by", UUID(as_uuid=True), nullable=True),
@@ -418,8 +431,8 @@ def upgrade() -> None:
     op.create_index("ix_orders_customer_id", "orders", ["customer_id"])
     op.create_index("ix_orders_state", "orders", ["state"])
     op.create_index("ix_orders_created_by", "orders", ["created_by"])
-    op.create_index("ix_orders_delivery_date", "orders", ["delivery_date"], postgresql_where=sa.text("delivery_date IS NOT NULL"))
-    op.create_index("ix_orders_by_state_delivery", "orders", ["state", "delivery_date"], postgresql_where=sa.text("delivery_date IS NOT NULL"))
+    op.create_index("ix_orders_delivery_date", "orders", ["delivery_date"])
+    op.create_index("ix_orders_by_state_delivery", "orders", ["state", "delivery_date"])
 
     # ══════════════════════════════════════════════════════════
     # PASO 16: Tabla order_details (detalles de cada pedido)
@@ -432,7 +445,7 @@ def upgrade() -> None:
         sa.Column("size", sa.String(50), nullable=False),
         sa.Column("colour", sa.String(100), nullable=True),
         sa.Column("amount", sa.Integer(), nullable=False),
-        sa.Column("state", sa.Enum("pendiente", "en_progreso", "completado", "cancelado", name="order_status"), nullable=False, server_default=sa.text("'pendiente'")),
+        sa.Column("state", ENUM("pendiente", "en_progreso", "completado", "cancelado", name="order_status", create_type=False), nullable=False, server_default=sa.text("'pendiente'")),
         sa.Column("order_date", sa.DateTime(timezone=True), nullable=False),
         sa.Column("created_by", UUID(as_uuid=True), nullable=True),
         sa.Column("updated_by", UUID(as_uuid=True), nullable=True),
@@ -476,7 +489,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_vale_order_id", "vale", ["order_id"])
     op.create_index("ix_vale_created_by", "vale", ["created_by"])
-    op.create_index("ix_vale_creation_date", "vale", ["creation_date"], postgresql_args={"descending": True})
+    op.create_index("ix_vale_creation_date", "vale", ["creation_date"])
 
     # ══════════════════════════════════════════════════════════
     # PASO 18: Tabla detail_vale (detalles de vales)
@@ -521,7 +534,7 @@ def upgrade() -> None:
         sa.Column("task_id", UUID(as_uuid=True), nullable=False),
         sa.Column("type_incidence", sa.String(100), nullable=False),
         sa.Column("description_incidence", sa.Text(), nullable=True),
-        sa.Column("state", sa.Enum("abierta", "en_progreso", "resuelta", "cerrada", name="incidence_status"), nullable=False, server_default=sa.text("'abierta'")),
+        sa.Column("state", ENUM("abierta", "en_progreso", "resuelta", "cerrada", name="incidence_status", create_type=False), nullable=False, server_default=sa.text("'abierta'")),
         sa.Column("report_date", sa.DateTime(timezone=True), nullable=False),
         sa.Column("created_by", UUID(as_uuid=True), nullable=True),
         sa.Column("updated_by", UUID(as_uuid=True), nullable=True),
@@ -538,8 +551,8 @@ def upgrade() -> None:
     op.create_index("ix_incidence_task_id", "incidence", ["task_id"])
     op.create_index("ix_incidence_state", "incidence", ["state"])
     op.create_index("ix_incidence_created_by", "incidence", ["created_by"])
-    op.create_index("ix_incidence_report_date", "incidence", ["report_date"], postgresql_args={"descending": True})
-    op.create_index("ix_incidence_by_state_date", "incidence", ["state", "report_date"], postgresql_where=sa.text("state != 'cerrada'"), postgresql_args={"descending": True})
+    op.create_index("ix_incidence_report_date", "incidence", ["report_date"])
+    op.create_index("ix_incidence_by_state_date", "incidence", ["state", "report_date"])
 
     # ══════════════════════════════════════════════════════════
     # PASO 20: Tabla notifications (notificaciones)
@@ -550,7 +563,7 @@ def upgrade() -> None:
         sa.Column("user_id", UUID(as_uuid=True), nullable=False),
         sa.Column("title_notification", sa.String(255), nullable=False),
         sa.Column("message_notification", sa.Text(), nullable=False),
-        sa.Column("type_notification", sa.Enum("info", "advertencia", "error", "exito", name="notification_type"), nullable=False),
+        sa.Column("type_notification", ENUM("info", "advertencia", "error", "exito", name="notification_type", create_type=False), nullable=False),
         sa.Column("is_read", sa.Boolean(), nullable=False, server_default=sa.text("FALSE")),
         sa.Column("created_by", UUID(as_uuid=True), nullable=True),
         sa.Column("updated_by", UUID(as_uuid=True), nullable=True),
@@ -567,7 +580,7 @@ def upgrade() -> None:
     op.create_index("ix_notifications_user_id", "notifications", ["user_id"])
     op.create_index("ix_notifications_is_read", "notifications", ["is_read"])
     op.create_index("ix_notifications_created_by", "notifications", ["created_by"])
-    op.create_index("ix_notifications_created_at", "notifications", ["created_at"], postgresql_args={"descending": True})
+    op.create_index("ix_notifications_created_at", "notifications", ["created_at"])
 
     # ══════════════════════════════════════════════════════════
     # PASO 21: Crear función y triggers para updated_at automático

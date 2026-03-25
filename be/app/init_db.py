@@ -44,34 +44,31 @@ def run_migrations(db_url: str) -> None:
         
         # Alembic está en /app/alembic dentro del contenedor
         # y en be/alembic en desarrollo local
+        # Nota: alembic.ini está en el directorio PADRE de alembic/ (be/ o /app/)
         import sys
         current_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(current_dir)  # be/
         parent_root = os.path.dirname(project_root)  # scrum/
         
-        # Intentar encontrar alembic en diferentes ubicaciones
-        possible_alembic_paths = [
-            os.path.join(parent_root, "alembic"),       # scrum/alembic
-            "/app/alembic",                              # Docker /app/alembic
-            os.path.join(project_root, "alembic"),      # be/alembic
+        # Intentar encontrar alembic.ini en diferentes ubicaciones
+        # (alembic.ini está en el mismo nivel que la carpeta alembic/, no DENTRO)
+        possible_alembic_ini_paths = [
+            os.path.join(project_root, "alembic.ini"),  # be/alembic.ini (local)
+            "/app/alembic.ini",                           # /app/alembic.ini (Docker)
+            os.path.join(parent_root, "alembic.ini"),    # scrum/alembic.ini (alternativo)
         ]
         
-        alembic_dir = None
-        for path in possible_alembic_paths:
+        alembic_ini = None
+        for path in possible_alembic_ini_paths:
             if os.path.exists(path):
-                alembic_dir = path
+                alembic_ini = path
                 break
         
-        if not alembic_dir:
-            logger.warning(f"⚠️  No se encontró directorio alembic en: {possible_alembic_paths}")
+        if not alembic_ini:
+            logger.warning(f"⚠️  alembic.ini no encontrado en: {possible_alembic_ini_paths}")
             return False
         
-        alembic_ini = os.path.join(alembic_dir, "alembic.ini")
-        if not os.path.exists(alembic_ini):
-            logger.warning(f"⚠️  alembic.ini no encontrado en: {alembic_ini}")
-            return False
-        
-        logger.info(f"📍 Usando alembic desde: {alembic_dir}")
+        logger.info(f"📍 Usando alembic.ini desde: {alembic_ini}")
         
         # Configurar Alembic
         alembic_config = Config(alembic_ini)

@@ -38,17 +38,35 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Gestiona el ciclo de vida de la aplicación FastAPI."""
     print("🚀 CALZADO J&R — Backend iniciando...")
     
-    Base.metadata.create_all(bind=engine)
-    print("✅ Tablas verificadas / creadas correctamente.")
+    # ══════════════════════════════════════════════════════════
+    # PASO 1: Ejecutar migraciones Alembic
+    # ══════════════════════════════════════════════════════════
+    # ¿Por qué migraciones?
+    #   - Version control del esquema de BD
+    #   - Reproducible en cualquier máquina
+    #   - Reversible (downgrade)
+    #   - Permite auditar cambios de esquema en git
+    #
+    # ¿Por qué NO Base.metadata.create_all()?
+    #   - No versionado
+    #   - No reproducible (depende del estado del ORM)
+    #   - Sin historial de cambios
+    # ══════════════════════════════════════════════════════════
+    from app.init_db import run_migrations
+    run_migrations(settings.DATABASE_URL)
+    print("✅ Migraciones Alembic aplicadas correctamente.")
     
-    # Cargar datos iniciales (roles, tipos de documento, usuario jefe)
-    # seed_orders está desactivado en seed_data.py — no se insertan pedidos de prueba
+    # ══════════════════════════════════════════════════════════
+    # PASO 2: Verificar datos iniciales (fallback)
+    # ══════════════════════════════════════════════════════════
+    # Las migraciones ya insertan datos iniciales (roles, tipos doc, usuarios).
+    # Esta verificación es un fallback por si algo falla.
     db = SessionLocal()
     try:
         from app.init.seed_data import seed_all
         seed_all(db)
     except Exception as e:
-        print(f"⚠️  Error en seed: {str(e)}")
+        print(f"⚠️  Error en verificación de datos iniciales: {str(e)}")
     finally:
         db.close()
     

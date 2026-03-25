@@ -24,7 +24,8 @@ Descripción: Modelo ORM SQLAlchemy para la tabla `users` en PostgreSQL.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -143,7 +144,7 @@ class User(Base):
 
     # User roles/occupations (Values in Spanish per user preference)
     occupation: Mapped[str | None] = mapped_column(
-        Enum("jefe", "cortador", "guarnecedor", "solador", "emplantillador", name="occupation_type"),
+        SQLEnum("jefe", "cortador", "guarnecedor", "solador", "emplantillador", name="occupation_type", create_type=False),
         nullable=True,
     )
 

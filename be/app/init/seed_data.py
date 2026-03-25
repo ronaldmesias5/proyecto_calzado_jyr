@@ -280,161 +280,52 @@ def seed_orders(db: Session) -> bool:
         return False
 
 
-def seed_admin(db: Session) -> bool:
+def seed_jefe(db: Session) -> bool:
     """
-    Inserta un usuario jefe (empleado con cargo de jefe) si no existe.
-    
-    Return:
-        True si se insertó o ya existía, False si hubo error.
+    Inserta el único usuario inicial: Ronald Guerrero (jefe).
+    Si ya existe, no hace nada.
     """
     try:
-        # Verificar si ya existe el usuario jefe
-        existing_jefe = db.query(User).filter(User.email == "admin@calzadojyr.com").first()
-        if existing_jefe:
-            print(f"✅ Jefe ya existe ({existing_jefe.email})")
+        existing = db.query(User).filter(User.email == "ronald.jefe@gmail.com").first()
+        if existing:
+            print(f"✅ Usuario jefe ya existe ({existing.email})")
             return True
-        
-        # Obtener rol empleado
+
         employee_role = db.query(Role).filter(Role.name_role == "employee").first()
         if not employee_role:
             print("❌ Rol employee no existe")
             return False
-        
-        print("🔄 Insertando usuario jefe...")
-        
-        jefe_user = User(
+
+        from app.models.type_document import TypeDocument
+        td = db.query(TypeDocument).filter(
+            TypeDocument.name_type_document == "Cédula de Ciudadanía"
+        ).first()
+
+        now = datetime.now(timezone.utc)
+        jefe = User(
             id=uuid.uuid4(),
-            email="admin@calzadojyr.com",
-            name_user="Administrador",
-            last_name="Calzado J&R",
-            phone="+57 322 000 0000",
-            hashed_password=hash_password("AdminSegura123!"),
+            email="ronald.jefe@gmail.com",
+            name_user="Ronald",
+            last_name="Guerrero",
+            phone="+57 312 845 7290",
+            identity_document="1098765432",
+            identity_document_type_id=td.id if td else None,
+            hashed_password=hash_password("Test123456!"),
             role_id=employee_role.id,
             occupation="jefe",
             is_active=True,
             is_validated=True,
-            validated_at=datetime.now(timezone.utc),
+            validated_at=now,
             accepted_terms=True,
-            terms_accepted_at=datetime.now(timezone.utc)
+            terms_accepted_at=now,
         )
-        
-        db.add(jefe_user)
+        db.add(jefe)
         db.commit()
-        print("✅ Usuario jefe insertado exitosamente")
-        print("   Email: admin@calzadojyr.com")
-        print("   Contraseña: AdminSegura123!")
+        print("✅ Usuario jefe insertado: ronald.jefe@gmail.com / Test123456!")
         return True
-        
+
     except Exception as e:
         print(f"❌ Error insertando jefe: {str(e)}")
-        db.rollback()
-        return False
-
-
-def seed_users(db: Session) -> bool:
-    """
-    Limpia todos los clientes de prueba y asegura que existan los 4 empleados.
-    Ronald (jefe) ya lo maneja seed_admin().
-
-    Siempre elimina todos los clientes de prueba.
-
-    Return:
-        True si todo OK, False si hubo error.
-    """
-    try:
-        # ── 1. Eliminar TODOS los clientes ────────────────────────────────
-        client_role = db.query(Role).filter(Role.name_role == "client").first()
-        if client_role:
-            deleted = (
-                db.query(User)
-                .filter(User.role_id == client_role.id)
-                .delete(synchronize_session=False)
-            )
-            if deleted > 0:
-                db.commit()
-                print(f"🗑️  {deleted} cliente(s) eliminado(s) — sin clientes registrados")
-
-        # ── 2. Obtener role de empleado ──────────────────────────────────
-        employee_role = db.query(Role).filter(Role.name_role == "employee").first()
-        if not employee_role:
-            print("❌ Rol employee no encontrado — ejecuta seed_roles() primero")
-            return False
-
-        # ── 3. Definir solo los 4 empleados ──────────────────────────────
-        users_data = [
-            # Empleados
-            dict(
-                id=uuid.UUID("a1000000-0000-0000-0000-000000000001"),
-                email="marina.emplantilladora@gmail.com",
-                name_user="Marina",
-                last_name="Leyton",
-                phone="+57 311 111 0001",
-                role_id=employee_role.id,
-                occupation="emplantillador",
-            ),
-            dict(
-                id=uuid.UUID("a1000000-0000-0000-0000-000000000002"),
-                email="juan.cortador@gmail.com",
-                name_user="Juan",
-                last_name="Cortez",
-                phone="+57 311 111 0002",
-                role_id=employee_role.id,
-                occupation="cortador",
-            ),
-            dict(
-                id=uuid.UUID("a1000000-0000-0000-0000-000000000003"),
-                email="pedro.solador@gmail.com",
-                name_user="Pedro",
-                last_name="Solis",
-                phone="+57 311 111 0003",
-                role_id=employee_role.id,
-                occupation="solador",
-            ),
-            dict(
-                id=uuid.UUID("a1000000-0000-0000-0000-000000000004"),
-                email="laura.guarnecedor@gmail.com",
-                name_user="Laura",
-                last_name="Garcia",
-                phone="+57 311 111 0004",
-                role_id=employee_role.id,
-                occupation="guarnecedor",
-            ),
-        ]
-
-        now = datetime.now(timezone.utc)
-        inserted = 0
-
-        for data in users_data:
-            existing = db.query(User).filter(User.email == data["email"]).first()
-            if existing:
-                continue
-            user = User(
-                id=data["id"],
-                email=data["email"],
-                name_user=data["name_user"],
-                last_name=data["last_name"],
-                phone=data["phone"],
-                hashed_password=hash_password("Test123456!"),
-                role_id=data["role_id"],
-                occupation=data["occupation"],
-                is_active=True,
-                is_validated=True,
-                validated_at=now,
-                must_change_password=False,
-            )
-            db.add(user)
-            inserted += 1
-
-        if inserted > 0:
-            db.commit()
-            print(f"✅ {inserted} usuario(s) insertado(s) exitosamente")
-        else:
-            print("✅ Usuarios ya existen — sin cambios")
-
-        return True
-
-    except Exception as e:
-        print(f"❌ Error en seed_users: {str(e)}")
         db.rollback()
         return False
 
@@ -584,56 +475,12 @@ def seed_catalog(db: Session) -> bool:
             {"style": "Running", "categories": ["Dama", "Caballero", "Infantil"]},
         ]
         
-        inserted_products = 0
-        available_colors = ["Negro", "Blanco", "Azul", "Rojo", "Marrón", "Gris"]
-        
-        for product_mapping in products_data:
-            style_obj = styles[product_mapping["style"]]
-            for cat_name in product_mapping["categories"]:
-                category_obj = categories[cat_name]
-                product = Product(
-                    id=uuid.uuid4(),
-                    name_product=f"{product_mapping['style']} - {cat_name}",
-                    style_id=style_obj.id,
-                    category_id=category_obj.id,
-                    brand_id=style_obj.brand_id,
-                    color=random.choice(available_colors),
-                    image_url=None, # Se pueden subir luego
-                    insufficient_threshold=12,
-                    state=True
-                )
-                db.add(product)
-                inserted_products += 1
-        
         db.commit()
         print(f"✅ Catálogo insertado exitosamente:")
         print(f"   • {len(brands)} brands ({', '.join([b['name'] for b in brands_data])})")
         print(f"   • {len(categories)} categorías ({', '.join([c['name'] for c in categories_data])})")
         print(f"   • {len(styles_data)} estilos")
-        print(f"   • {inserted_products} productos")
-        print("   ⚠️  Nota: Reebok Princesa solo en Dama + Infantil (sin Caballero)")
-        
-        # Generar inventario inicial aleatorio para que no todo esté en 0
-        print("🔄 Generando inventario inicial aleatorio...")
-        all_products = db.query(Product).all()
-        for p in all_products:
-            # Seleccionar algunas tallas aleatorias según categoría
-            if p.category.name_category == "Infantil":
-                sizes = ["21", "22", "23", "24", "25", "26"]
-            else:
-                sizes = ["36", "37", "38", "39", "40", "41", "42"]
-                
-            for size in random.sample(sizes, k=random.randint(2, len(sizes))):
-                inv = Inventory(
-                    id=uuid.uuid4(),
-                    product_id=p.id,
-                    size=size,
-                    amount=random.randint(0, 50) # Algunos con stock, otros bajo
-                )
-                db.add(inv)
-        
-        db.commit()
-        print("✅ Inventario inicial generado")
+        print("   ℹ️  Productos: se crean desde la aplicación")
         return True
         
     except Exception as e:
@@ -653,8 +500,7 @@ def seed_all(db: Session) -> None:
         success = True
         success = seed_roles(db) and success
         success = seed_type_documents(db) and success
-        success = seed_admin(db) and success
-        success = seed_users(db) and success
+        success = seed_jefe(db) and success
         success = seed_catalog(db) and success
         # seed_orders NO se ejecuta — no se insertan pedidos de prueba automáticamente
 

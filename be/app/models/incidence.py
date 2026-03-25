@@ -16,7 +16,6 @@ from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.models.user import User
-    from app.models.tasks import Task
 
 
 class IncidenceStatus(str, Enum):
@@ -91,7 +90,7 @@ class Incidence(Base):
     # 🔗 Relaciones
     # ────────────────────────────
 
-    task = relationship("Task", lazy="selectin")
+    task = relationship("Task", foreign_keys=[task_id], back_populates="incidences", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"Incidence(id={self.id}, task_id={self.task_id}, state={self.state})"

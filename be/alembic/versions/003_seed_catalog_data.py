@@ -1,10 +1,11 @@
-"""Seed catalog data: brands, categories, styles and products.
+"""Seed catalog data: brands, categories and styles.
 
-¿Qué? Migración que inserta datos del catálogo:
+¿Qué? Migración que inserta datos base del catálogo:
       - Marcas: Nike, Adidas, Puma, New Balance, Reebok (5 marcas)
       - Categorías: Dama, Caballero, Infantil (3 categorías)
       - Estilos: 22 estilos diferentes (Air Force, Superstar, etc.)
-      - Productos: combinaciones de estilo × categoría (65 productos)
+
+¿Por qué sin productos? Los productos se crean desde la aplicación.
 
 ¿Para qué? Poblar el catálogo inicial de calzado para que los clientes puedan ver
            opciones de compra y los operadores tengán productos para gestionar.
@@ -100,55 +101,11 @@ def upgrade() -> None:
         """
     )
 
-    # ═══════════════════════════════════════════════════════════
-    # INSERTAR PRODUCTOS (65)
-    # Regla: Reebok Princesa solo en Dama e Infantil (excluir Caballero)
-    # ═══════════════════════════════════════════════════════════
-    op.execute(
-        """
-        INSERT INTO products (style_id, category_id, brand_id, name_product, created_at, updated_at)
-        SELECT 
-          s.id,
-          c.id,
-          s.brand_id,
-          s.name_style || ' - ' || c.name_category,
-          NOW(),
-          NOW()
-        FROM styles s
-        CROSS JOIN categories c
-        WHERE 
-          -- Reebok Princesa: solo Dama + Infantil (excluir Caballero)
-          NOT (s.name_style = 'Princesa' AND c.name_category = 'Caballero')
-        AND NOT EXISTS (
-          SELECT 1 FROM products
-          WHERE products.style_id = s.id 
-          AND products.category_id = c.id
-        );
-        """
-    )
 
 
 def downgrade() -> None:
-    """Revierte la migración: elimina productos, estilos, categorías y marcas.
+    """Revierte la migración: elimina estilos, categorías y marcas."""
 
-    ¿Qué? Borra los datos de catálogo insertados.
-    ¿Para qué? Permitir deshacer la migración.
-    ¿Impacto? Destruye datos de catálogo — usar solo en desarrollo.
-    """
-
-    # Eliminar productos (primero porque referencia estilos y categorías)
-    op.execute(
-        """
-        DELETE FROM products
-        WHERE name_product LIKE '% - %'
-        AND style_id IN (
-          SELECT id FROM styles WHERE name_style IN 
-          ('Air Force One', 'SB', 'Force One Bota', 'Air Jordan 1', 'Air Jordan 11', 'Air Max',
-           'Superstar', 'Forum', 'Ultraboost', 'Stan Smith', 'Campus', 'Varial', 'Neo',
-           'California', '9060', '574', '1300', '530', 'Princesa', 'Plus Clásico', 'Bota Clásica', 'Running')
-        );
-        """
-    )
 
     # Eliminar estilos
     op.execute(

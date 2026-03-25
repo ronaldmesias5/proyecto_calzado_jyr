@@ -81,7 +81,14 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "2"]
+# Script de entrada: ejecutar migraciones + iniciar servidor
+# ¿Por qué? Las migraciones se ejecutan antes de que Uvicorn arranque,
+# evitando que consultas iniciales fallen durante startup.
+# El lifespan de main.py también ejecuta migraciones (redundancia defensiva).
+ENTRYPOINT ["sh", "-c", "\
+  echo '🔄 Ejecutando migraciones Alembic...'; \
+  alembic upgrade head; \
+  echo '✅ Migraciones completadas'; \
+  echo '🚀 Iniciando Uvicorn...'; \
+  uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2 \
+  "]
